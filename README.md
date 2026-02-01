@@ -34,6 +34,3 @@ Run it:
 chmod +x nc_test.sh
 python start.py
 ```
-
-
-asdf
