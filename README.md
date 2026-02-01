@@ -1,4 +1,8 @@
 # Simple Proxy Evaluation
+This tools checks availability, reachability and time-quality of proxies or hosts and filters based on \
+ping time.
+
+Best for wholesome host selection.
 
 ## Config
 
