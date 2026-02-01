@@ -10,11 +10,14 @@ Best for wholesome host selection.
 
 PING_MAX_TIME_MS    // Ping max time tolerance in ms
 PING_COUNT          // Number of sent ICMP 
-PING_TIMEOUT=1      // Wait time in seconds
-PING_THREADS=30     // Number of threads
+PING_TIMEOUT        // Wait time in seconds
+PING_THREADS        // Number of threads
 
-NC_TIMEOUT=2        // Netcat timeout
-NC_JOBS=30          // Netcat number of Jobs
+NC_TIMEOUT          // Netcat timeout
+NC_JOBS             // Netcat number of Jobs
+
+TLS_TIMEOUT         // TLS Timeout
+TLS_THREADS         // TLS number of threads
 
 ```
 ### urls.txt
