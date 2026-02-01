@@ -1,3 +1,6 @@
 ./initial_data
 __pycache__
 .idea
+
+initial_data
+initial_data/*

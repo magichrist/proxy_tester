@@ -5,6 +5,7 @@
 
 INPUT="$1"
 OUTPUT="$2"
+NC_BIN="nc"
 
 if [[ -z "$INPUT" || -z "$OUTPUT" ]]; then
   echo "Usage: $0 <input_file> <output_file>"
@@ -30,8 +31,8 @@ jobs=0
 
 while IFS= read -r link; do
   (
-    host=$(echo "$link" | sed -E 's|.*@([^:/?]+).*|\1|')
-    port=$(echo "$link" | sed -E 's|.*:([0-9]+).*|\1|')
+    host=$(echo "$link" | sed -E 's|^[a-zA-Z0-9+.-]+://[^@]+@([^:/?#]+).*|\1|')
+    port=$(echo "$link" | sed -nE 's|^[a-zA-Z0-9+.-]+://[^@]+@[^:/?#]+:([0-9]+).*|\1|p')
 
     if [[ -n "$host" && -n "$port" ]]; then
       if "$NC_BIN" -z -G "$TIMEOUT" "$host" "$port" >/dev/null 2>&1; then

@@ -116,6 +116,7 @@ for name in os.listdir(BASE_DIR):
         input_file=path,
         output_file=filtered
     )
+    os.system(f"wc -l {path}.filtered")
 
 
 print("Done ✔")
