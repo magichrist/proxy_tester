@@ -6,6 +6,7 @@ import time
 
 import base64_decryptor as b64d
 import ping_test
+import tls_test
 
 print('''
 ⠀⠀⠀⢠⣾⣷⣦⡀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀
@@ -117,6 +118,20 @@ for name in os.listdir(BASE_DIR):
         output_file=filtered
     )
     os.system(f"wc -l {path}.filtered")
+
+for name in os.listdir(BASE_DIR):
+    path = os.path.join(BASE_DIR, name)
+
+    if not path.endswith(".filtered"):
+        continue
+
+    tls_test.tls_runner_threaded(path, path + ".tls")
+
+# ---- cleanup ----
+for name in os.listdir(BASE_DIR):
+    path = os.path.join(BASE_DIR, name)
+    if path.endswith(".de") or path.endswith(".txt"):
+        os.remove(path)
 
 
 print("Done ✔")
