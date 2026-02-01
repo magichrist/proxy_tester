@@ -1,5 +1,6 @@
 import socket
 import ssl
+import time
 from urllib.parse import urlparse, parse_qs
 from concurrent.futures import ThreadPoolExecutor, as_completed
 
@@ -16,13 +17,16 @@ def parse_vless_host_port_sni(link: str):
     return host, port, sni
 
 
-def tls_alive(host: str, port: int, sni: str = None, timeout: int = TLS_TIMEOUT) -> bool:
+def tls_alive(host: str, port: int, sni: str = None, timeout: int = TLS_TIMEOUT) -> bool | list[bool | float]:
     """Check if TLS handshake succeeds."""
     try:
         context = ssl.create_default_context()
+        start=time.time()
         with socket.create_connection((host, port), timeout=timeout) as sock:
             with context.wrap_socket(sock, server_hostname=sni or host):
-                return True
+                stop=time.time()
+                return [True,round((stop-start)*1000,2)]
+
     except Exception:
         return False
 
@@ -34,12 +38,14 @@ def check_link(link: str):
         return None
     try:
         host, port, sni = parse_vless_host_port_sni(link)
-        if tls_alive(host, port, sni):
-            return (link, True, host, port, sni)
+        tls_test=tls_alive(host, port, sni)
+        pinged_time=tls_test[1]
+        if tls_test[0]:
+            return (link, True, host, port, sni, pinged_time)
         else:
-            return (link, False, host, port, sni)
+            return (link, False, host, port, sni, pinged_time)
     except Exception:
-        return (link, False, None, None, None)
+        return (link, False, None, None, None, None)
 
 
 def tls_runner_threaded(input_file: str, output_file: str, max_workers: int = TLS_THREADS):
@@ -55,10 +61,10 @@ def tls_runner_threaded(input_file: str, output_file: str, max_workers: int = TL
             result = future.result()
             if not result:
                 continue
-            link, success, host, port, sni = result
+            link, success, host, port, sni, pinged_time = result
             if success:
                 print(f"[✅] TLS handshake succeeded: {host}:{port} (SNI={sni})")
-                out_file.write(link + "\n")
+                out_file.write(link + f" -- {pinged_time}\n")
                 working_count += 1
             else:
                 if host and port:
