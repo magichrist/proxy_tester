@@ -45,13 +45,15 @@ def check_link(link: str):
         else:
             return (link, False, host, port, sni, pinged_time)
     except Exception:
-        return (link, False, None, None, None, None)
+        return (link, False, None, None, None, 999_999)
 
 
 def tls_runner_threaded(input_file: str, output_file: str, max_workers: int = TLS_THREADS):
     """Threaded TLS scanner: reads links line by line, tests them, writes working ones."""
     working_count = 0
-    with open(output_file, 'w') as out_file, ThreadPoolExecutor(max_workers=max_workers) as executor:
+    with (open(output_file, 'w') as out_file,
+          open(f"{output_file}_faulty", 'w') as fault_file,
+          ThreadPoolExecutor(max_workers=max_workers) as executor):
         futures = []
         with open(input_file, 'r') as in_file:
             for line in in_file:
@@ -71,6 +73,7 @@ def tls_runner_threaded(input_file: str, output_file: str, max_workers: int = TL
                     print(f"[❌] TLS handshake failed: {host}:{port} (SNI={sni})")
                 else:
                     print(f"[⚠️] Error testing link: {link}")
+                    fault_file.write(link + "\n")
 
     print(f"\n[ℹ️] Saved {working_count} working links to {output_file}")
 
