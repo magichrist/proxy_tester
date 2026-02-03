@@ -1,5 +1,5 @@
 # Simple Proxy Evaluation
-This tools checks availability, reachability and time-quality of proxies or hosts and filters based on \
+Proxy Tester checks availability, reachability and time-quality of proxies or hosts and filters based on \
 ping time.
 
 Best for wholesome host selection.
@@ -24,6 +24,7 @@ TLS_THREADS         // TLS number of threads
 add other endpoints here
 
 ### local
+**make the directory**
 add your proxy list files here
 
 ---
@@ -40,4 +41,7 @@ Run it:
 ```
 chmod +x nc_test.sh
 python start.py
+```
+```
+--no-url // to skip url and test the files in *local* 
 ```
