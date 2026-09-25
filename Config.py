@@ -16,7 +16,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:  # keeps the typing name out of `from Config import *`
-    from typing import Iterable
+    from collections.abc import Iterable
 
 # --------------------------------------------------------------------------
 # Legacy constant names. These are the documented public API; do not rename.
@@ -50,30 +50,63 @@ _ALIAS_SOURCES: dict[str, str] = {
     "PROBE_WORKERS": "NC_JOBS",
 }
 
-_FLOAT_NAMES = frozenset({
-    "PING_MAX_TIME_MS", "PING_TIMEOUT", "NC_TIMEOUT", "TLS_TIMEOUT",
-    "MAX_LATENCY_MS", "PROBE_TIMEOUT",
-})
-_INT_NAMES = frozenset({
-    "PING_COUNT", "PING_THREADS", "NC_JOBS", "TLS_THREADS",
-    "PROBE_WORKERS", "TOP_N",
-})
+_FLOAT_NAMES = frozenset(
+    {
+        "PING_MAX_TIME_MS",
+        "PING_TIMEOUT",
+        "NC_TIMEOUT",
+        "TLS_TIMEOUT",
+        "MAX_LATENCY_MS",
+        "PROBE_TIMEOUT",
+    }
+)
+_INT_NAMES = frozenset(
+    {
+        "PING_COUNT",
+        "PING_THREADS",
+        "NC_JOBS",
+        "TLS_THREADS",
+        "PROBE_WORKERS",
+        "TOP_N",
+    }
+)
 #: Minimum accepted value per name. None means "any value is fine".
 _MINIMUMS: dict[str, float] = {
-    "PING_MAX_TIME_MS": 0.0, "PING_COUNT": 0, "PING_TIMEOUT": 0.0,
-    "PING_THREADS": 1, "NC_TIMEOUT": 0.0, "NC_JOBS": 1, "TLS_TIMEOUT": 0.0,
-    "TLS_THREADS": 1, "MAX_LATENCY_MS": 0.0, "PROBE_TIMEOUT": 0.0,
-    "PROBE_WORKERS": 1, "TOP_N": 0,
+    "PING_MAX_TIME_MS": 0.0,
+    "PING_COUNT": 0,
+    "PING_TIMEOUT": 0.0,
+    "PING_THREADS": 1,
+    "NC_TIMEOUT": 0.0,
+    "NC_JOBS": 1,
+    "TLS_TIMEOUT": 0.0,
+    "TLS_THREADS": 1,
+    "MAX_LATENCY_MS": 0.0,
+    "PROBE_TIMEOUT": 0.0,
+    "PROBE_WORKERS": 1,
+    "TOP_N": 0,
 }
 #: Display order for :func:`describe`.
 _ORDER: tuple[str, ...] = (
-    "MAX_LATENCY_MS", "PING_MAX_TIME_MS", "PING_COUNT", "PING_TIMEOUT",
-    "PING_THREADS", "PROBE_TIMEOUT", "NC_TIMEOUT", "PROBE_WORKERS", "NC_JOBS",
-    "TLS_TIMEOUT", "TLS_THREADS", "TOP_N",
+    "MAX_LATENCY_MS",
+    "PING_MAX_TIME_MS",
+    "PING_COUNT",
+    "PING_TIMEOUT",
+    "PING_THREADS",
+    "PROBE_TIMEOUT",
+    "NC_TIMEOUT",
+    "PROBE_WORKERS",
+    "NC_JOBS",
+    "TLS_TIMEOUT",
+    "TLS_THREADS",
+    "TOP_N",
 )
 _UNITS: dict[str, str] = {
-    "PING_MAX_TIME_MS": "ms", "PING_TIMEOUT": "s", "MAX_LATENCY_MS": "ms",
-    "NC_TIMEOUT": "s", "PROBE_TIMEOUT": "s", "TLS_TIMEOUT": "s",
+    "PING_MAX_TIME_MS": "ms",
+    "PING_TIMEOUT": "s",
+    "MAX_LATENCY_MS": "ms",
+    "NC_TIMEOUT": "s",
+    "PROBE_TIMEOUT": "s",
+    "TLS_TIMEOUT": "s",
 }
 
 
@@ -103,7 +136,7 @@ def _coerce(name: str, raw: object) -> float | int:
     return value
 
 
-def _set(name: str, value: float | int) -> None:
+def _set(name: str, value: float) -> None:
     """Assign a validated value to ``name`` and keep its alias in sync."""
     globals()[name] = value
     alias_source = _ALIAS_SOURCES.get(name)
@@ -125,9 +158,7 @@ def apply_overrides(pairs: Iterable[str]) -> None:
     pending: dict[str, float | int] = {}
     for pair in pairs:
         if not isinstance(pair, str) or "=" not in pair:
-            raise ValueError(
-                f"invalid override {pair!r}: expected NAME=VALUE"
-            )
+            raise ValueError(f"invalid override {pair!r}: expected NAME=VALUE")
         name, _, raw = pair.partition("=")
         name = name.strip()
         raw = raw.strip()
@@ -162,5 +193,6 @@ def describe() -> str:
 
 #: Snapshot of the shipped defaults, taken after the constants above are set.
 DEFAULTS: dict[str, float | int] = {
-    name: globals()[name] for name in _ORDER  # type: ignore[misc]
+    name: globals()[name]
+    for name in _ORDER  # type: ignore[misc]
 }

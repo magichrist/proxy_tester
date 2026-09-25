@@ -24,20 +24,20 @@ import binascii
 import json
 import os
 import re
+from collections.abc import Iterable, Iterator, Mapping
 from dataclasses import dataclass
-from typing import Iterable, Iterator, Mapping
 from urllib.parse import unquote
 
 __all__ = [
-    "ParsedLink",
-    "LoadStats",
     "DEFAULT_PORT",
-    "parse_link",
-    "iter_raw_lines",
+    "LoadStats",
+    "ParsedLink",
     "dedupe",
+    "filter_latency",
+    "iter_raw_lines",
     "load_unique",
     "load_unique_detailed",
-    "filter_latency",
+    "parse_link",
 ]
 
 #: Port assumed when a link omits one. A missing port is never a parse failure.
@@ -189,7 +189,7 @@ def _split_port(authority: str) -> tuple[str, int | None] | None:
         if end == -1:
             return None
         host = authority[1:end]
-        rest = authority[end + 1:]
+        rest = authority[end + 1 :]
         if not rest:
             return (host, None)
         if not rest.startswith(":"):
@@ -244,8 +244,13 @@ def _lookup(params: Mapping[str, str], *names: str) -> str | None:
     return None
 
 
-def _build(raw: str, scheme: str, userinfo: str | None, authority: str,
-           params: list[tuple[str, str]]) -> ParsedLink | None:
+def _build(
+    raw: str,
+    scheme: str,
+    userinfo: str | None,
+    authority: str,
+    params: list[tuple[str, str]],
+) -> ParsedLink | None:
     """Assemble a ParsedLink from the already-split parts, or None if invalid.
 
     This is the single place that decides the port default, the SNI fallback and
@@ -263,7 +268,11 @@ def _build(raw: str, scheme: str, userinfo: str | None, authority: str,
     sni = _lookup(lookup, "sni", "host", "peer") or host
     uuid = unquote(userinfo) if userinfo else None
 
-    identity = f"{scheme}://{userinfo}@{host}:{resolved_port}" if userinfo else f"{scheme}://{host}:{resolved_port}"
+    identity = (
+        f"{scheme}://{userinfo}@{host}:{resolved_port}"
+        if userinfo
+        else f"{scheme}://{host}:{resolved_port}"
+    )
     query = _sorted_query(params)
     key = f"{identity}?{query}" if query else identity
 
@@ -281,13 +290,13 @@ def _build(raw: str, scheme: str, userinfo: str | None, authority: str,
 
 def _parse_shaped(text: str, scheme: str) -> ParsedLink | None:
     """Parse ``scheme://[userinfo@]host[:port][/path][?query][#fragment]``."""
-    body = text[len(scheme) + 3:]
+    body = text[len(scheme) + 3 :]
     cut = body.find("#")
     if cut != -1:
         body = body[:cut]
     cut = body.find("?")
     if cut != -1:
-        query = body[cut + 1:]
+        query = body[cut + 1 :]
         body = body[:cut]
         params = _split_params(query)
     else:
@@ -313,8 +322,9 @@ def _parse_shaped(text: str, scheme: str) -> ParsedLink | None:
     return _build(text, scheme, userinfo, authority, params)
 
 
-def _parse_base64_userinfo(text: str, scheme: str, userinfo: str, authority: str,
-                           params: list[tuple[str, str]]) -> ParsedLink | None:
+def _parse_base64_userinfo(
+    text: str, scheme: str, userinfo: str, authority: str, params: list[tuple[str, str]]
+) -> ParsedLink | None:
     """Decode an ``ss://`` base64 userinfo, then re-parse the inner shape.
 
     Two forms exist in the wild and both are handled: the blob wraps the whole
@@ -345,7 +355,7 @@ def _strip_scored_prefix(text: str) -> str:
     followed by a tab is removed, which cannot affect a real link.
     """
     match = _MS_FIELD_RE.match(text)
-    return text[match.end():] if match else text
+    return text[match.end() :] if match else text
 
 
 def _b64_text(value: str) -> str | None:
@@ -416,7 +426,7 @@ def _parse_base64_body(text: str, scheme: str) -> ParsedLink | None:
     encoded. Only attempted when the ordinary parse already failed, so it can
     never change the outcome of a link that parses normally.
     """
-    payload = text[len(scheme) + 3:].split("#", 1)[0].split("?", 1)[0]
+    payload = text[len(scheme) + 3 :].split("#", 1)[0].split("?", 1)[0]
     decoded = _b64_text(payload)
     if decoded is None:
         return None
@@ -427,7 +437,9 @@ def _parse_base64_body(text: str, scheme: str) -> ParsedLink | None:
         return _parse_shaped(decoded, inner_scheme)
     if "@" not in decoded:
         return None
-    return _build(text, scheme, decoded.rpartition("@")[0], decoded.rpartition("@")[2], [])
+    return _build(
+        text, scheme, decoded.rpartition("@")[0], decoded.rpartition("@")[2], []
+    )
 
 
 def _parse_bare(text: str) -> ParsedLink | None:
@@ -556,7 +568,9 @@ def load_unique(path: str | os.PathLike[str]) -> tuple[list[ParsedLink], int]:
     return links, stats.dropped
 
 
-def load_unique_detailed(path: str | os.PathLike[str]) -> tuple[list[ParsedLink], LoadStats]:
+def load_unique_detailed(
+    path: str | os.PathLike[str],
+) -> tuple[list[ParsedLink], LoadStats]:
     """Like :func:`load_unique` but returns the full :class:`LoadStats` accounting.
 
     The dropped and duplicate counts are what make spec requirement 3 (no

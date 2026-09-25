@@ -112,22 +112,29 @@ class ApplyOverridesTests(ConfigGuard):
         self.assertIn("unknown setting", str(ctx.exception))
 
     def test_rejects_an_unparseable_value(self) -> None:
-        for pair in ("MAX_LATENCY_MS=abc", "TLS_THREADS=x", "TOP_N=1.2.3", "MAX_LATENCY_MS="):
-            with self.subTest(pair=pair):
-                with self.assertRaises(ValueError):
-                    Config.apply_overrides([pair])
+        for pair in (
+            "MAX_LATENCY_MS=abc",
+            "TLS_THREADS=x",
+            "TOP_N=1.2.3",
+            "MAX_LATENCY_MS=",
+        ):
+            with self.subTest(pair=pair), self.assertRaises(ValueError):
+                Config.apply_overrides([pair])
 
     def test_rejects_a_value_below_the_minimum(self) -> None:
-        for pair in ("TLS_THREADS=0", "NC_JOBS=0", "PING_THREADS=-1", "PROBE_WORKERS=0"):
-            with self.subTest(pair=pair):
-                with self.assertRaises(ValueError):
-                    Config.apply_overrides([pair])
+        for pair in (
+            "TLS_THREADS=0",
+            "NC_JOBS=0",
+            "PING_THREADS=-1",
+            "PROBE_WORKERS=0",
+        ):
+            with self.subTest(pair=pair), self.assertRaises(ValueError):
+                Config.apply_overrides([pair])
 
     def test_rejects_a_pair_without_an_equals_sign(self) -> None:
         for pair in ("MAX_LATENCY_MS", "", "=400", "MAX_LATENCY_MS=400=500"):
-            with self.subTest(pair=pair):
-                with self.assertRaises(ValueError):
-                    Config.apply_overrides([pair])
+            with self.subTest(pair=pair), self.assertRaises(ValueError):
+                Config.apply_overrides([pair])
 
     def test_rejects_a_float_for_an_integer_setting(self) -> None:
         with self.assertRaises(ValueError):
@@ -145,7 +152,9 @@ class ApplyOverridesTests(ConfigGuard):
     def test_alias_pair_syncs_from_the_canonical_name(self) -> None:
         Config.apply_overrides(["PROBE_TIMEOUT=3.5"])
         self.assertEqual(Config.PROBE_TIMEOUT, 3.5)
-        self.assertEqual(Config.NC_TIMEOUT, 3.5, "the legacy name must follow the canonical one")
+        self.assertEqual(
+            Config.NC_TIMEOUT, 3.5, "the legacy name must follow the canonical one"
+        )
 
     def test_latency_alias_syncs_both_ways(self) -> None:
         Config.apply_overrides(["PING_MAX_TIME_MS=123"])
@@ -160,12 +169,20 @@ class ApplyOverridesTests(ConfigGuard):
         self.assertEqual(Config.NC_JOBS, 9)
 
     def test_unaliased_names_do_not_disturb_their_neighbours(self) -> None:
-        before = (Config.MAX_LATENCY_MS, Config.PING_MAX_TIME_MS,
-                  Config.PROBE_TIMEOUT, Config.NC_TIMEOUT)
+        before = (
+            Config.MAX_LATENCY_MS,
+            Config.PING_MAX_TIME_MS,
+            Config.PROBE_TIMEOUT,
+            Config.NC_TIMEOUT,
+        )
         Config.apply_overrides(["TLS_TIMEOUT=9.0", "TOP_N=1"])
         self.assertEqual(
-            (Config.MAX_LATENCY_MS, Config.PING_MAX_TIME_MS,
-             Config.PROBE_TIMEOUT, Config.NC_TIMEOUT),
+            (
+                Config.MAX_LATENCY_MS,
+                Config.PING_MAX_TIME_MS,
+                Config.PROBE_TIMEOUT,
+                Config.NC_TIMEOUT,
+            ),
             before,
         )
 

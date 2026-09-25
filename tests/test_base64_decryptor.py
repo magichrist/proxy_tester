@@ -19,6 +19,7 @@ except ImportError:  # pragma: no cover
 
 import base64_decryptor
 
+
 def _wrap_keeping_a_long_tail(blob: str, width: int) -> list[str]:
     """Wrap ``blob`` at ``width``, trimming the width until the tail is >= 4 chars.
 
@@ -93,7 +94,9 @@ class SingleLinePayloadTests(support.LoopbackTestCase):
         alphabets, so guard and decoder agree.
         """
         blob = base64.urlsafe_b64encode(PAYLOAD.encode()).decode().rstrip("=")
-        self.assertIn("-_", blob + "-_", "the fixture must exercise the URL-safe alphabet")
+        self.assertIn(
+            "-_", blob + "-_", "the fixture must exercise the URL-safe alphabet"
+        )
         source = support.write_lines(self.path("in.txt"), [blob])
         base64_decryptor.runner(source, self.path("out.txt"))
         self.assertEqual(support.read_lines(self.path("out.txt")), LINKS)
@@ -116,7 +119,9 @@ class SingleLinePayloadTests(support.LoopbackTestCase):
     def test_a_wrapped_urlsafe_payload_is_decoded(self) -> None:
         """URL-safe plus wrapped, which is what a real feed looks like."""
         blob = base64.urlsafe_b64encode(PAYLOAD.encode()).decode().rstrip("=")
-        source = support.write_lines(self.path("in.txt"), _wrap_keeping_a_long_tail(blob, 64))
+        source = support.write_lines(
+            self.path("in.txt"), _wrap_keeping_a_long_tail(blob, 64)
+        )
         stats = base64_decryptor.runner(source, self.path("out.txt"))
         self.assertEqual(support.read_lines(self.path("out.txt")), LINKS)
         self.assertEqual(stats.decoded_blocks, 1)
@@ -176,14 +181,17 @@ class WrappedPayloadTests(support.LoopbackTestCase):
         """
         blob = base64.b64encode(PAYLOAD.encode()).decode()
         short_tails = [
-            width for width in range(4, 120)
+            width
+            for width in range(4, 120)
             if len(textwrap.wrap(blob, width)) > 1
             and 1 <= len(textwrap.wrap(blob, width)[-1]) <= 3
         ]
         self.assertTrue(short_tails, "the fixture must produce a short tail somewhere")
         for width in short_tails:
             with self.subTest(width=width):
-                source = support.write_lines(self.path("in.txt"), textwrap.wrap(blob, width))
+                source = support.write_lines(
+                    self.path("in.txt"), textwrap.wrap(blob, width)
+                )
                 base64_decryptor.runner(source, self.path("out.txt"))
                 self.assertEqual(support.read_lines(self.path("out.txt")), LINKS)
 
@@ -221,10 +229,26 @@ class WrappedPayloadTests(support.LoopbackTestCase):
         """
         payload = base64.b64encode(PAYLOAD.encode()).decode()
         for label, lines, expected in [
-            ("payload wrapped to end on =", textwrap.wrap(payload[:-1], 64) + ["="], LINKS),
-            ("payload wrapped to end on ==", textwrap.wrap(payload[:-2], 64) + ["=="], LINKS),
-            ("payload then stray =", _wrap_keeping_a_long_tail(payload, 64) + ["="], LINKS + ["="]),
-            ("payload then stray ==", _wrap_keeping_a_long_tail(payload, 64) + ["=="], LINKS + ["=="]),
+            (
+                "payload wrapped to end on =",
+                textwrap.wrap(payload[:-1], 64) + ["="],
+                LINKS,
+            ),
+            (
+                "payload wrapped to end on ==",
+                textwrap.wrap(payload[:-2], 64) + ["=="],
+                LINKS,
+            ),
+            (
+                "payload then stray =",
+                _wrap_keeping_a_long_tail(payload, 64) + ["="],
+                LINKS + ["="],
+            ),
+            (
+                "payload then stray ==",
+                _wrap_keeping_a_long_tail(payload, 64) + ["=="],
+                LINKS + ["=="],
+            ),
         ]:
             with self.subTest(label=label):
                 source = support.write_lines(self.path("in.txt"), lines)
@@ -232,7 +256,9 @@ class WrappedPayloadTests(support.LoopbackTestCase):
                 out = support.read_lines(self.path("out.txt"))
                 self.assertEqual(out, expected, f"{label} mishandled the tail")
                 self.assertEqual(stats.decoded_blocks, 1, f"{label} lost the payload")
-                self.assertEqual(stats.decoded_lines, len(LINKS), f"{label} leaked into the text")
+                self.assertEqual(
+                    stats.decoded_lines, len(LINKS), f"{label} leaked into the text"
+                )
 
     def test_a_bare_equals_after_a_payload_does_not_poison_it(self) -> None:
         """The stray-padding case, pinned exactly: the payload survives intact."""
@@ -291,7 +317,9 @@ class WrappedPayloadTests(support.LoopbackTestCase):
         lines = _wrap_keeping_a_long_tail(blob, 64) + ["plain trailing line"]
         source = support.write_lines(self.path("in.txt"), lines)
         base64_decryptor.runner(source, self.path("out.txt"))
-        self.assertEqual(support.read_lines(self.path("out.txt")), LINKS + ["plain trailing line"])
+        self.assertEqual(
+            support.read_lines(self.path("out.txt")), LINKS + ["plain trailing line"]
+        )
 
     def test_two_base64_runs_separated_by_prose_both_decode(self) -> None:
         """The same defect, seen as a missed decode rather than a corrupt one."""
@@ -332,7 +360,9 @@ class WrappedPayloadTests(support.LoopbackTestCase):
         stats = base64_decryptor.runner(source, self.path("out.txt"))
         self.assertEqual(
             support.read_lines(self.path("out.txt")),
-            ["a note before the payload"] + LINKS + ["and a comment after it", LINKS[0], "trailing remark"],
+            ["a note before the payload"]
+            + LINKS
+            + ["and a comment after it", LINKS[0], "trailing remark"],
         )
         self.assertEqual(stats.decoded_blocks, 2)
 
@@ -347,7 +377,9 @@ class WrappedPayloadTests(support.LoopbackTestCase):
         lines = _wrap_keeping_a_long_tail(blob, 76) + ["plain trailing line"]
         source = support.write_lines(self.path("in.txt"), lines)
         stats = base64_decryptor.runner(source, self.path("out.txt"))
-        self.assertTrue(stats.decoded, "a prose tail must not turn a decode into a passthrough")
+        self.assertTrue(
+            stats.decoded, "a prose tail must not turn a decode into a passthrough"
+        )
         self.assertEqual(stats.decoded_lines, len(LINKS))
         self.assertEqual(stats.lines_out, len(LINKS) + 1)
 
@@ -392,7 +424,9 @@ class IsBase64Tests(unittest.TestCase):
     def test_accepts_a_payload(self) -> None:
         blob = base64.b64encode(PAYLOAD.encode()).decode()
         self.assertTrue(base64_decryptor.is_base64(blob))
-        self.assertTrue(base64_decryptor.is_base64("\n".join(_wrap_keeping_a_long_tail(blob, 64))))
+        self.assertTrue(
+            base64_decryptor.is_base64("\n".join(_wrap_keeping_a_long_tail(blob, 64)))
+        )
 
     def test_rejects_link_lines(self) -> None:
         for line in LINKS:
@@ -400,7 +434,14 @@ class IsBase64Tests(unittest.TestCase):
                 self.assertFalse(base64_decryptor.is_base64(line))
 
     def test_rejects_prose_and_short_input(self) -> None:
-        for value in ("", "   ", "hello", "hello there friend", "404 Not Found", "a" * 7):
+        for value in (
+            "",
+            "   ",
+            "hello",
+            "hello there friend",
+            "404 Not Found",
+            "a" * 7,
+        ):
             with self.subTest(value=value):
                 self.assertFalse(base64_decryptor.is_base64(value))
 
@@ -416,12 +457,13 @@ class IsBase64Tests(unittest.TestCase):
 
     def test_rejects_binary_noise(self) -> None:
         blob = base64.b64encode(bytes(range(256))).decode()
-        self.assertFalse(base64_decryptor.is_base64(blob),
-                         "binary that decodes to control characters is not a link list")
-
+        self.assertFalse(
+            base64_decryptor.is_base64(blob),
+            "binary that decodes to control characters is not a link list",
+        )
 
     def test_a_large_non_payload_span_does_not_rescan_quadratically(self) -> None:
-        """        A big base64-looking file that is not a payload must stay linear.
+        """A big base64-looking file that is not a payload must stay linear.
 
         Run detection is per line, and each run is retried with the last line
         trimmed off. Done naively -- re-deriving the span end and re-running the
@@ -443,7 +485,6 @@ class IsBase64Tests(unittest.TestCase):
         lines = textwrap.wrap("".join(noise), 76)
         self.assertGreater(len(lines), 500, "the fixture must be a long span")
 
-
         real = base64_decryptor._decode_body
         attempts = []
 
@@ -459,7 +500,8 @@ class IsBase64Tests(unittest.TestCase):
         self.assertEqual(out, lines, "a non-payload span must pass through intact")
         self.assertEqual(blocks, 1, "one maximal span, not one per line")
         self.assertLessEqual(
-            len(attempts), base64_decryptor.MAX_TRIM_LINES + 1,
+            len(attempts),
+            base64_decryptor.MAX_TRIM_LINES + 1,
             f"{len(attempts)} decode attempts for {len(lines)} lines: the span is "
             f"being rescanned per line, which is quadratic",
         )
@@ -478,13 +520,17 @@ class StatsTests(support.LoopbackTestCase):
 
     def test_reports_a_decode(self) -> None:
         blob = base64.b64encode(PAYLOAD.encode()).decode()
-        source = support.write_lines(self.path("in.txt"), _wrap_keeping_a_long_tail(blob, 64))
+        source = support.write_lines(
+            self.path("in.txt"), _wrap_keeping_a_long_tail(blob, 64)
+        )
         stats = base64_decryptor.runner(source, self.path("out.txt"))
         self.assertEqual(stats.decoded_blocks, 1)
         self.assertEqual(stats.decoded_lines, len(LINKS))
         self.assertEqual(stats.b64_blocks, 1)
-        self.assertFalse(stats.lines_in == stats.lines_out,
-                         "wrapping must collapse the block into separate lines")
+        self.assertFalse(
+            stats.lines_in == stats.lines_out,
+            "wrapping must collapse the block into separate lines",
+        )
 
     def test_missing_input_file_raises(self) -> None:
         with self.assertRaises(OSError):

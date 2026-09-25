@@ -39,13 +39,13 @@ import tempfile
 import time
 import urllib.error
 import urllib.request
+from collections.abc import Sequence
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Sequence
 from urllib.parse import unquote
 
-import Config
 import base64_decryptor
+import Config
 import links
 import netprobe
 import progress
@@ -103,7 +103,9 @@ TOP_LINK_PREVIEW = 60
 # Download behaviour
 # --------------------------------------------------------------------------
 
-USER_AGENT = "proxy_tester/2.0 (stdlib urllib; +https://github.com/magichrist/proxy_tester)"
+USER_AGENT = (
+    "proxy_tester/2.0 (stdlib urllib; +https://github.com/magichrist/proxy_tester)"
+)
 DOWNLOAD_TIMEOUT = 30.0
 #: Largest response accepted from a subscription source, as a runaway guard.
 MAX_DOWNLOAD_BYTES = 64 * 1024 * 1024
@@ -306,7 +308,9 @@ def _filename_for(url: str, disposition: str, index: int) -> str:
     if match:
         raw = unquote(match.group(1))
     else:
-        match = _CD_PLAIN.search(disposition or "") or _CD_BARE.search(disposition or "")
+        match = _CD_PLAIN.search(disposition or "") or _CD_BARE.search(
+            disposition or ""
+        )
         if match:
             raw = match.group(1)
     if not raw:
@@ -466,7 +470,9 @@ def select_leftovers(out_dir: Path) -> list[Path]:
     return chosen
 
 
-def adopt_leftovers(out_dir: Path, staged: Sequence[tuple[str, str, Path]]) -> list[tuple[str, str, Path]]:
+def adopt_leftovers(
+    out_dir: Path, staged: Sequence[tuple[str, str, Path]]
+) -> list[tuple[str, str, Path]]:
     """Restore pre-staged leftovers into the workspace under their own names.
 
     The surviving artifact is ``<stem>.alive``, and that is exactly the name the
@@ -490,7 +496,9 @@ def adopt_leftovers(out_dir: Path, staged: Sequence[tuple[str, str, Path]]) -> l
             continue
         if not count:
             continue
-        progress.log(f"  {progress.paint('reusing', 'cyan')} {origin_name} ({count} link(s))")
+        progress.log(
+            f"  {progress.paint('reusing', 'cyan')} {origin_name} ({count} link(s))"
+        )
         adopted.append((stem, origin_name, target))
     return adopted
 
@@ -523,7 +531,9 @@ def collect_inputs(
     fresh.extend(copy_local_inputs(local_dir, work_dir))
 
     if not fresh and staged:
-        progress.log(f"{progress.paint('no new link lists', 'yellow')}; re-using the previous run's output")
+        progress.log(
+            f"{progress.paint('no new link lists', 'yellow')}; re-using the previous run's output"
+        )
         rescued = adopt_leftovers(leftover_dir, staged)
         fresh.extend(path for _stem, _origin, path in rescued)
         adopted_names.update(path.name for path in fresh)
@@ -667,9 +677,10 @@ def _strip_timings(scored: Path, out_path: Path) -> int:
     tab is unaffected: only the first field is removed, via ``maxsplit=1``.
     """
     count = 0
-    with open(scored, "r", encoding="utf-8", errors="replace") as src, open(
-        out_path, "w", encoding="utf-8", newline="\n"
-    ) as dst:
+    with (
+        open(scored, "r", encoding="utf-8", errors="replace") as src,
+        open(out_path, "w", encoding="utf-8", newline="\n") as dst,
+    ):
         for raw_line in src:
             line = raw_line.rstrip("\r\n")
             if not line.strip():
@@ -737,7 +748,9 @@ def report(outcomes: Sequence[Outcome], elapsed: float) -> int:
     """Print the final report; return the process exit code."""
     paint = progress.paint
     progress.log("")
-    progress.log(f"=== {paint('run summary', 'bold')} ({paint(f'{elapsed:.1f}s', 'dim')}) ===")
+    progress.log(
+        f"=== {paint('run summary', 'bold')} ({paint(f'{elapsed:.1f}s', 'dim')}) ==="
+    )
     _table(outcomes)
 
     total = _totals(outcomes)
@@ -785,11 +798,19 @@ def report(outcomes: Sequence[Outcome], elapsed: float) -> int:
     if total.sorted_ok:
         progress.log(f"  {paint('sorted check: PASS', 'green')} (every ms <= the next)")
     else:
-        _error(f"  {paint('sorted check: FAIL', 'red')} — artifact is not numerically ascending")
+        _error(
+            f"  {paint('sorted check: FAIL', 'red')} — artifact is not numerically ascending"
+        )
 
     if total.problems:
         _error("")
-        _error(paint("!!! ACCOUNTING MISMATCH — links may have been lost silently !!!", "red", "bold"))
+        _error(
+            paint(
+                "!!! ACCOUNTING MISMATCH — links may have been lost silently !!!",
+                "red",
+                "bold",
+            )
+        )
         for problem in total.problems:
             _error(f"  - {problem}")
         return EXIT_FAILED
@@ -906,7 +927,9 @@ def top_links(outcomes: Sequence[Outcome], count: int) -> None:
         return
     shown = combined[:count]
     progress.log("")
-    progress.log(f"=== {progress.paint(f'top {len(shown)} fastest TLS-passing', 'bold')} ===")
+    progress.log(
+        f"=== {progress.paint(f'top {len(shown)} fastest TLS-passing', 'bold')} ==="
+    )
     for rank, (ms, link) in enumerate(shown, start=1):
         progress.log(
             f"  {progress.paint(f'{rank:>2}.', 'dim')} "
@@ -1045,7 +1068,9 @@ def apply_settings(args: argparse.Namespace) -> int:
     shorthand: list[str] = []
     if args.max_latency is not None:
         if args.max_latency < 0:
-            _error(f"error: --max-latency must not be negative (got {args.max_latency})")
+            _error(
+                f"error: --max-latency must not be negative (got {args.max_latency})"
+            )
             return EXIT_USAGE
         shorthand.append(f"MAX_LATENCY_MS={args.max_latency:g}")
     if args.workers is not None:
@@ -1094,9 +1119,7 @@ def main(argv: Sequence[str] | None = None) -> int:
         print(Config.describe())
         print()
 
-    out_dir = (
-        Path(args.out).expanduser().resolve() if args.out else DEFAULT_WORKSPACE
-    )
+    out_dir = Path(args.out).expanduser().resolve() if args.out else DEFAULT_WORKSPACE
 
     progress.log(f"{progress.paint('workspace:', 'bold')} {out_dir}")
     progress.log(f"{progress.paint('local dir:', 'bold')} {LOCAL_DIR}")
@@ -1105,7 +1128,9 @@ def main(argv: Sequence[str] | None = None) -> int:
     # Leftovers must be rescued before the wipe, but they are only worth
     # rescuing when nothing else can supply input, so ask local/ and urls.txt
     # first.
-    rescue = (not args.no_url) or _local_has_files(LOCAL_DIR) or bool(_read_urls(URLS_FILE))
+    rescue = (
+        (not args.no_url) or _local_has_files(LOCAL_DIR) or bool(_read_urls(URLS_FILE))
+    )
     with tempfile.TemporaryDirectory(prefix="proxy_tester_leftovers_") as scratch:
         staged: list[tuple[str, str, Path]] = []
         if rescue:

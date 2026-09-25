@@ -34,6 +34,7 @@ except ImportError:  # pragma: no cover - degraded path, exercised in unit tests
     def _paint(text: str, *styles: str) -> str:  # type: ignore[misc]
         return text
 
+
 try:  # Agent A owns this module; see _require_links().
     import links as _links
 except ImportError:  # pragma: no cover - degraded path, exercised in unit tests
@@ -45,11 +46,11 @@ except ImportError:  # pragma: no cover - Config is always present in-tree
     _Config = None  # type: ignore[assignment]
 
 __all__ = [
+    "endpoint_str",
+    "filter_by_latency",
+    "load_timings",
     "probe_endpoint",
     "probe_file",
-    "load_timings",
-    "filter_by_latency",
-    "endpoint_str",
 ]
 
 _ERR_UNREACHABLE = frozenset({errno.EHOSTUNREACH, errno.ENETUNREACH})
@@ -180,7 +181,7 @@ def probe_endpoint(
         return (False, None, "tls")
     except ConnectionRefusedError:
         return (False, None, "refused")
-    except (socket.timeout, TimeoutError):
+    except TimeoutError:
         return (False, None, "timeout")
     except OSError as exc:
         code = exc.errno
@@ -409,8 +410,7 @@ def filter_by_latency(
 
     os.makedirs(os.path.dirname(os.path.abspath(output_file)) or ".", exist_ok=True)
     with open(output_file, "w", encoding="utf-8") as fh:
-        for link in kept:
-            fh.write(link.raw + "\n")
+        fh.writelines(link.raw + "\n" for link in kept)
 
     with _stage(f"latency <= {max_ms:g} ms", len(parsed)) as st:
         st.advance(len(kept))

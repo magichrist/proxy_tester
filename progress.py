@@ -20,16 +20,17 @@ import re
 import sys
 import threading
 import time
-from typing import IO, Sequence
+from collections.abc import Sequence
+from typing import IO
 
 __all__ = [
     "Stage",
-    "stage",
-    "summary_table",
+    "color_enabled",
     "log",
     "paint",
     "set_color",
-    "color_enabled",
+    "stage",
+    "summary_table",
 ]
 
 #: At most this many in-place redraws per second on a terminal.
@@ -220,7 +221,9 @@ class Stage:
                 f"[{paint(self.title, 'cyan')}] "
                 f"{paint(str(self.count), 'bold')} done  {paint(elapsed, 'dim')}"
             )
-        percent = 100 if self.count >= self.total else int(self.count * 100 / self.total)
+        percent = (
+            100 if self.count >= self.total else int(self.count * 100 / self.total)
+        )
         # Green once finished, yellow while in flight, so a stalled stage is
         # visible at a glance while watching a long run.
         meter = "green" if percent >= 100 else "yellow"
@@ -277,7 +280,11 @@ class Stage:
                 if self.count % NON_TTY_CHUNK:
                     return
             else:
-                percent = 100 if self.count >= self.total else int(self.count * 100 / self.total)
+                percent = (
+                    100
+                    if self.count >= self.total
+                    else int(self.count * 100 / self.total)
+                )
                 if percent < self._next_non_tty:
                     return
                 if percent >= 100:
@@ -326,7 +333,7 @@ class Stage:
                 text = f"{text}  {summary}"
             self._render(final=True, text=text)
 
-    def __enter__(self) -> "Stage":
+    def __enter__(self) -> Stage:
         return self
 
     def __exit__(self, *exc: object) -> None:
@@ -383,7 +390,7 @@ def summary_table(rows: Sequence[tuple[str, int]]) -> None:
     count_width = max(len(_fmt_count(value)) for _, value in items)
     out = sys.stdout
     for label, value in items:
-        name = f"{str(label):<{label_width}}"
+        name = f"{label!s:<{label_width}}"
         count = f"{_fmt_count(value):>{count_width}}"
         _write(out, f"  {paint(name, 'dim')}  {paint(count, 'bold')}\n")
 

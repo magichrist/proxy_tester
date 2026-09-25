@@ -132,14 +132,18 @@ class ProbeCacheTests(support.LoopbackTestCase):
 
         with self.quiet():
             stats = netprobe.probe_file(
-                path, self.path("out.alive"), self.path("out.timings.jsonl"),
-                timeout=1.0, max_workers=4,
+                path,
+                self.path("out.alive"),
+                self.path("out.timings.jsonl"),
+                timeout=1.0,
+                max_workers=4,
             )
 
         self.assertEqual(stats["links_in"], total_links)
         self.assertEqual(stats["endpoints"], self.ENDPOINTS)
         self.assertEqual(
-            len(connects), self.ENDPOINTS,
+            len(connects),
+            self.ENDPOINTS,
             f"{total_links} links over {self.ENDPOINTS} endpoints must issue "
             f"{self.ENDPOINTS} connects, not {len(connects)}",
         )
@@ -162,8 +166,12 @@ class ProbeCacheTests(support.LoopbackTestCase):
         seed = {netprobe.endpoint_str("127.0.0.1", port): 12.5 for port in ports}
         with self.quiet():
             stats = netprobe.probe_file(
-                path, self.path("out.alive"), self.path("out.timings.jsonl"),
-                timeout=1.0, max_workers=4, timings=seed,
+                path,
+                self.path("out.alive"),
+                self.path("out.timings.jsonl"),
+                timeout=1.0,
+                max_workers=4,
+                timings=seed,
             )
         self.assertEqual(connects, [], "a pre-seeded endpoint must never be re-probed")
         self.assertEqual(stats["links_alive"], len(lines))
@@ -174,8 +182,12 @@ class ProbeCacheTests(support.LoopbackTestCase):
         seed = {netprobe.endpoint_str("127.0.0.1", port): None for port in ports}
         with self.quiet():
             stats = netprobe.probe_file(
-                path, self.path("out.alive"), self.path("out.timings.jsonl"),
-                timeout=1.0, max_workers=4, timings=seed,
+                path,
+                self.path("out.alive"),
+                self.path("out.timings.jsonl"),
+                timeout=1.0,
+                max_workers=4,
+                timings=seed,
             )
         self.assertEqual(stats["links_alive"], 0)
         self.assertEqual(stats["links_dead"], len(lines))
@@ -187,35 +199,53 @@ class ProbeFileOutputTests(support.LoopbackTestCase):
 
     def test_alive_file_preserves_input_order_and_raw_link_text(self) -> None:
         with support.tcp_listener() as listener:
-            lines = [
-                _link("127.0.0.1", listener.port, f"a{i}") for i in range(5)
-            ] + ["junk line", _link("127.0.0.1", support.closed_port(), "dead")]
+            lines = [_link("127.0.0.1", listener.port, f"a{i}") for i in range(5)] + [
+                "junk line",
+                _link("127.0.0.1", support.closed_port(), "dead"),
+            ]
             path = support.write_lines(self.path("in.de"), lines)
             with self.quiet():
                 stats = netprobe.probe_file(
-                    path, self.path("out.alive"), self.path("out.timings.jsonl"),
-                    timeout=1.0, max_workers=4,
+                    path,
+                    self.path("out.alive"),
+                    self.path("out.timings.jsonl"),
+                    timeout=1.0,
+                    max_workers=4,
                 )
         self.assertEqual(support.read_lines(self.path("out.alive")), lines[:5])
-        self.assertEqual(stats["links_in"], 6, "the unparseable line is excluded from links_in")
+        self.assertEqual(
+            stats["links_in"], 6, "the unparseable line is excluded from links_in"
+        )
 
     def test_timings_jsonl_record_shape(self) -> None:
         with support.tcp_listener() as listener:
             dead = support.closed_port()
             path = support.write_lines(
                 self.path("in.de"),
-                [_link("127.0.0.1", listener.port, "up"), _link("127.0.0.1", dead, "down")],
+                [
+                    _link("127.0.0.1", listener.port, "up"),
+                    _link("127.0.0.1", dead, "down"),
+                ],
             )
             with self.quiet():
                 netprobe.probe_file(
-                    path, self.path("out.alive"), self.path("out.timings.jsonl"),
-                    timeout=1.0, max_workers=2,
+                    path,
+                    self.path("out.alive"),
+                    self.path("out.timings.jsonl"),
+                    timeout=1.0,
+                    max_workers=2,
                 )
-        records = [json.loads(line) for line in support.read_lines(self.path("out.timings.jsonl"))]
+        records = [
+            json.loads(line)
+            for line in support.read_lines(self.path("out.timings.jsonl"))
+        ]
         self.assertEqual(len(records), 2)
         for record in records:
             self.assertEqual(set(record), TIMINGS_KEYS)
-            self.assertEqual(record["endpoint"], netprobe.endpoint_str(record["host"], record["port"]))
+            self.assertEqual(
+                record["endpoint"],
+                netprobe.endpoint_str(record["host"], record["port"]),
+            )
         by_port = {record["port"]: record for record in records}
         up = by_port[listener.port]
         self.assertIs(up["ok"], True)
@@ -228,11 +258,15 @@ class ProbeFileOutputTests(support.LoopbackTestCase):
         self.assertIn(down["error"], VALID_SLUGS)
 
     def test_output_directories_are_created(self) -> None:
-        path = support.write_lines(self.path("in.de"), [_link("127.0.0.1", support.closed_port(), "d")])
+        path = support.write_lines(
+            self.path("in.de"), [_link("127.0.0.1", support.closed_port(), "d")]
+        )
         nested_alive = self.path("a/b/c/out.alive")
         nested_timings = self.path("a/b/c/out.timings.jsonl")
         with self.quiet():
-            netprobe.probe_file(path, nested_alive, nested_timings, timeout=0.5, max_workers=2)
+            netprobe.probe_file(
+                path, nested_alive, nested_timings, timeout=0.5, max_workers=2
+            )
         import os
 
         self.assertTrue(os.path.exists(nested_timings))
@@ -240,8 +274,11 @@ class ProbeFileOutputTests(support.LoopbackTestCase):
     def test_missing_input_file_raises(self) -> None:
         with self.assertRaises(OSError):
             netprobe.probe_file(
-                self.path("absent.de"), self.path("o.alive"), self.path("o.jsonl"),
-                timeout=0.5, max_workers=2,
+                self.path("absent.de"),
+                self.path("o.alive"),
+                self.path("o.jsonl"),
+                timeout=0.5,
+                max_workers=2,
             )
 
 
@@ -249,12 +286,30 @@ class LoadTimingsTests(support.LoopbackTestCase):
     """The timings.jsonl contract, in both directions."""
 
     RECORDS = [
-        {"endpoint": "127.0.0.1:443", "host": "127.0.0.1", "port": 443,
-         "ok": True, "ms": 42.31, "error": None},
-        {"endpoint": "127.0.0.1:8443", "host": "127.0.0.1", "port": 8443,
-         "ok": False, "ms": None, "error": "timeout"},
-        {"endpoint": "[::1]:443", "host": "::1", "port": 443,
-         "ok": True, "ms": 0.5, "error": None},
+        {
+            "endpoint": "127.0.0.1:443",
+            "host": "127.0.0.1",
+            "port": 443,
+            "ok": True,
+            "ms": 42.31,
+            "error": None,
+        },
+        {
+            "endpoint": "127.0.0.1:8443",
+            "host": "127.0.0.1",
+            "port": 8443,
+            "ok": False,
+            "ms": None,
+            "error": "timeout",
+        },
+        {
+            "endpoint": "[::1]:443",
+            "host": "::1",
+            "port": 443,
+            "ok": True,
+            "ms": 0.5,
+            "error": None,
+        },
     ]
 
     def _write(self, records: list[dict]) -> str:
@@ -276,12 +331,18 @@ class LoadTimingsTests(support.LoopbackTestCase):
             dead = support.closed_port()
             path = support.write_lines(
                 self.path("in.de"),
-                [_link("127.0.0.1", listener.port, "up"), _link("127.0.0.1", dead, "down")],
+                [
+                    _link("127.0.0.1", listener.port, "up"),
+                    _link("127.0.0.1", dead, "down"),
+                ],
             )
             with self.quiet():
                 netprobe.probe_file(
-                    path, self.path("out.alive"), self.path("out.timings.jsonl"),
-                    timeout=1.0, max_workers=2,
+                    path,
+                    self.path("out.alive"),
+                    self.path("out.timings.jsonl"),
+                    timeout=1.0,
+                    max_workers=2,
                 )
             timings = netprobe.load_timings(self.path("out.timings.jsonl"))
         self.assertEqual(len(timings), 2)
@@ -297,9 +358,13 @@ class LoadTimingsTests(support.LoopbackTestCase):
             [
                 "not json at all",
                 "[]",
-                json.dumps({"host": "127.0.0.1", "port": 1}),   # no endpoint key: skipped
-                json.dumps({"endpoint": 5, "ms": 1.0}),         # endpoint not a str: skipped
-                json.dumps({"endpoint": "127.0.0.1:443", "ms": 7.0, "ok": True, "error": None}),
+                json.dumps(
+                    {"host": "127.0.0.1", "port": 1}
+                ),  # no endpoint key: skipped
+                json.dumps({"endpoint": 5, "ms": 1.0}),  # endpoint not a str: skipped
+                json.dumps(
+                    {"endpoint": "127.0.0.1:443", "ms": 7.0, "ok": True, "error": None}
+                ),
             ],
         )
         self.assertEqual(netprobe.load_timings(path), {"127.0.0.1:443": 7.0})
@@ -307,7 +372,8 @@ class LoadTimingsTests(support.LoopbackTestCase):
     def test_a_record_with_an_unreadable_ms_reads_as_a_failure(self) -> None:
         """A corrupt measurement must reject its links, not silently keep them."""
         path = support.write_lines(
-            self.path("t.jsonl"), [json.dumps({"endpoint": "127.0.0.1:9", "ms": "fast"})]
+            self.path("t.jsonl"),
+            [json.dumps({"endpoint": "127.0.0.1:9", "ms": "fast"})],
         )
         self.assertEqual(netprobe.load_timings(path), {"127.0.0.1:9": None})
 
@@ -319,7 +385,8 @@ class LoadTimingsTests(support.LoopbackTestCase):
         parsed = links.parse_link("vless://u@[2001:db8::1]:443#n")
         assert parsed is not None
         self.assertEqual(
-            parsed.endpoint_str, netprobe.endpoint_str(parsed.host, parsed.port),
+            parsed.endpoint_str,
+            netprobe.endpoint_str(parsed.host, parsed.port),
             "the two endpoint key builders must never drift",
         )
 
@@ -328,7 +395,9 @@ class FilterByLatencyTests(support.LoopbackTestCase):
     """filter_by_latency must never silently truncate the alive file."""
 
     def test_empty_timings_file_raises(self) -> None:
-        alive = support.write_lines(self.path("in.alive"), [_link("127.0.0.1", 443, "a")])
+        alive = support.write_lines(
+            self.path("in.alive"), [_link("127.0.0.1", 443, "a")]
+        )
         timings = support.write_lines(self.path("t.jsonl"), [])
         out = self.path("out.filtered")
         with self.assertRaises(ValueError) as ctx:
@@ -340,14 +409,22 @@ class FilterByLatencyTests(support.LoopbackTestCase):
         )
 
     def test_absent_timings_file_raises(self) -> None:
-        alive = support.write_lines(self.path("in.alive"), [_link("127.0.0.1", 443, "a")])
+        alive = support.write_lines(
+            self.path("in.alive"), [_link("127.0.0.1", 443, "a")]
+        )
         out = self.path("out.filtered")
         with self.assertRaises(ValueError):
-            netprobe.filter_by_latency(alive, out, self.path("absent.jsonl"), max_ms=800.0)
+            netprobe.filter_by_latency(
+                alive, out, self.path("absent.jsonl"), max_ms=800.0
+            )
         self.assertFalse(__import__("os").path.exists(out))
 
-    def test_an_existing_output_is_not_truncated_when_measurements_are_missing(self) -> None:
-        alive = support.write_lines(self.path("in.alive"), [_link("127.0.0.1", 443, "a")])
+    def test_an_existing_output_is_not_truncated_when_measurements_are_missing(
+        self,
+    ) -> None:
+        alive = support.write_lines(
+            self.path("in.alive"), [_link("127.0.0.1", 443, "a")]
+        )
         out = support.write_lines(self.path("out.filtered"), ["PREVIOUS RUN SURVIVED"])
         timings = support.write_lines(self.path("t.jsonl"), [])
         with self.assertRaises(ValueError):
@@ -362,22 +439,37 @@ class FilterByLatencyTests(support.LoopbackTestCase):
             stats = netprobe.filter_by_latency(
                 alive, self.path("out.filtered"), timings, max_ms=800.0
             )
-        self.assertEqual(stats, {"links_in": 0, "kept": 0, "rejected": 0, "links_dropped": 0})
+        self.assertEqual(
+            stats, {"links_in": 0, "kept": 0, "rejected": 0, "links_dropped": 0}
+        )
 
     def test_splits_on_the_threshold(self) -> None:
         with support.tcp_listener() as fast, support.tcp_listener() as slow:
-            lines = [
-                _link("127.0.0.1", fast.port, f"f{i}") for i in range(4)
-            ] + [_link("127.0.0.1", slow.port, f"s{i}") for i in range(3)]
+            lines = [_link("127.0.0.1", fast.port, f"f{i}") for i in range(4)] + [
+                _link("127.0.0.1", slow.port, f"s{i}") for i in range(3)
+            ]
             alive = support.write_lines(self.path("in.alive"), lines)
             records = [
-                {"endpoint": netprobe.endpoint_str("127.0.0.1", fast.port),
-                 "host": "127.0.0.1", "port": fast.port, "ok": True, "ms": 5.0, "error": None},
-                {"endpoint": netprobe.endpoint_str("127.0.0.1", slow.port),
-                 "host": "127.0.0.1", "port": slow.port, "ok": True, "ms": 900.0, "error": None},
+                {
+                    "endpoint": netprobe.endpoint_str("127.0.0.1", fast.port),
+                    "host": "127.0.0.1",
+                    "port": fast.port,
+                    "ok": True,
+                    "ms": 5.0,
+                    "error": None,
+                },
+                {
+                    "endpoint": netprobe.endpoint_str("127.0.0.1", slow.port),
+                    "host": "127.0.0.1",
+                    "port": slow.port,
+                    "ok": True,
+                    "ms": 900.0,
+                    "error": None,
+                },
             ]
             timings = support.write_lines(
-                self.path("t.jsonl"), [json.dumps(r, separators=(",", ":")) for r in records]
+                self.path("t.jsonl"),
+                [json.dumps(r, separators=(",", ":")) for r in records],
             )
             with self.quiet():
                 stats = netprobe.filter_by_latency(
@@ -393,8 +485,16 @@ class FilterByLatencyTests(support.LoopbackTestCase):
         with support.tcp_listener() as listener:
             lines = [_link("127.0.0.1", listener.port, "a")]
             alive = support.write_lines(self.path("in.alive"), lines)
-            records = [{"endpoint": "some.other.endpoint:1", "host": "some.other.endpoint",
-                        "port": 1, "ok": True, "ms": 1.0, "error": None}]
+            records = [
+                {
+                    "endpoint": "some.other.endpoint:1",
+                    "host": "some.other.endpoint",
+                    "port": 1,
+                    "ok": True,
+                    "ms": 1.0,
+                    "error": None,
+                }
+            ]
             timings = support.write_lines(
                 self.path("t.jsonl"), [json.dumps(records[0], separators=(",", ":"))]
             )
@@ -412,7 +512,10 @@ class FilterByLatencyTests(support.LoopbackTestCase):
             timings = support.write_lines(self.path("t.jsonl"), [])
             with self.quiet():
                 stats = netprobe.filter_by_latency(
-                    alive, self.path("out.filtered"), timings, max_ms=800.0,
+                    alive,
+                    self.path("out.filtered"),
+                    timings,
+                    max_ms=800.0,
                     timings={netprobe.endpoint_str("127.0.0.1", listener.port): 3.0},
                 )
         self.assertEqual(stats["kept"], 1)

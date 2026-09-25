@@ -26,7 +26,9 @@ TROJAN = f"trojan://pa%40ss@{HOST}:8443?sni=cdn.proxy.example#TR"
 SS_BLOB = base64.b64encode(b"aes-256-gcm:secret@edge3.proxy.example:8388").decode()
 SS_WHOLE = f"ss://{SS_BLOB}"
 SS_USERINFO = (
-    "ss://" + base64.b64encode(b"aes-256-gcm:secret").decode() + "@edge3.proxy.example:8388"
+    "ss://"
+    + base64.b64encode(b"aes-256-gcm:secret").decode()
+    + "@edge3.proxy.example:8388"
 )
 VMESS_BODY = json.dumps(
     {
@@ -63,7 +65,9 @@ class ParseVlessTests(unittest.TestCase):
         self.assertEqual(parsed.raw, VLESS)
 
     def test_sni_falls_back_to_host_query_then_to_url_host(self) -> None:
-        from_host = links.parse_link(f"vless://{UUID}@{HOST}:443?host=fallback.example#x")
+        from_host = links.parse_link(
+            f"vless://{UUID}@{HOST}:443?host=fallback.example#x"
+        )
         assert from_host is not None
         self.assertEqual(from_host.sni, "fallback.example")
 
@@ -237,6 +241,7 @@ class HostShapeTests(unittest.TestCase):
         self.assertEqual(parsed.host, "2001:db8::dead:beef")
         self.assertEqual(parsed.port, 9000)
         self.assertEqual(parsed.endpoint_str, "[2001:db8::dead:beef]:9000")
+
     def test_malformed_ipv6_is_rejected(self) -> None:
         self.assertIsNone(links.parse_link(f"vless://{UUID}@[2001:db8::1::2]:443"))
 
@@ -252,7 +257,9 @@ class DedupeTests(unittest.TestCase):
         second = f"vless://{UUID}@{HOST}:443?type=ws#second-note"
         unique, duplicates = links.dedupe([first, second])
         self.assertEqual(duplicates, 1)
-        self.assertEqual(unique, [first], "the first-seen raw line must represent the pair")
+        self.assertEqual(
+            unique, [first], "the first-seen raw line must represent the pair"
+        )
 
     def test_query_param_order_does_not_create_distinct_entries(self) -> None:
         a = f"vless://{UUID}@{HOST}:443?alpha=1&beta=2#note"
@@ -333,7 +340,9 @@ class LoadAccountingTests(support.LoopbackTestCase):
         self.assertEqual(stats.duplicates, 1)
         self.assertEqual(stats.links, len(parsed))
         self.assertEqual(stats.endpoints, 2)
-        self.assertEqual(stats.dropped + stats.duplicates + stats.links, stats.total_lines)
+        self.assertEqual(
+            stats.dropped + stats.duplicates + stats.links, stats.total_lines
+        )
 
     def test_duplicate_lines_are_collapsed_not_counted_as_dropped(self) -> None:
         path = support.write_lines(self.path("in.txt"), [VLESS, VLESS, VLESS])
@@ -360,7 +369,8 @@ class FilterLatencyTests(unittest.TestCase):
         within, rejected = links.filter_latency(parsed, timings, 800.0)
         self.assertEqual([link.raw for link in within], [parsed[0].raw])
         self.assertEqual(
-            [link.raw for link in rejected], [parsed[1].raw, parsed[2].raw],
+            [link.raw for link in rejected],
+            [parsed[1].raw, parsed[2].raw],
             "an endpoint missing from timings failed the probe and must be rejected",
         )
 
@@ -379,8 +389,10 @@ class FilterLatencyTests(unittest.TestCase):
             parsed[2].endpoint_str: 90.0,
         }
         within, _rejected = links.filter_latency(parsed, timings, 800.0)
-        self.assertEqual([link.endpoint_str for link in within],
-                         [parsed[1].endpoint_str, parsed[2].endpoint_str, parsed[0].endpoint_str])
+        self.assertEqual(
+            [link.endpoint_str for link in within],
+            [parsed[1].endpoint_str, parsed[2].endpoint_str, parsed[0].endpoint_str],
+        )
 
     def test_threshold_is_inclusive(self) -> None:
         parsed = self._links()
@@ -399,18 +411,40 @@ class FilterLatencyTests(unittest.TestCase):
         parsed = self._links()
         timings = {parsed[0].endpoint_str: 5.0, parsed[1].endpoint_str: 9000.0}
         _within, rejected = links.filter_latency(parsed, timings, 800.0)
-        self.assertEqual([link.raw for link in rejected], [parsed[1].raw, parsed[2].raw])
+        self.assertEqual(
+            [link.raw for link in rejected], [parsed[1].raw, parsed[2].raw]
+        )
 
 
 class RobustnessTests(unittest.TestCase):
     """parse_link must never raise, whatever the subscription server served."""
 
     JUNK = [
-        "", "   ", "\x00", "://", "://@", "http://", "vless://", "vless://@",
-        "ss://@@@@", "vmess://{}", "vmess://" + base64.b64encode(b"not json").decode(),
-        "trojan://pw@", "vless://u@", "#" * 50, "?" * 50, "a" * 5000,
-        "vless://u@host:443?a=%ZZ", "\t\t", "'quoted'", "a, b, c",
-        "ftp://u@host:21", "socks5://u@host:1080", "://x", "198.51.100.1:", "[::1]",
+        "",
+        "   ",
+        "\x00",
+        "://",
+        "://@",
+        "http://",
+        "vless://",
+        "vless://@",
+        "ss://@@@@",
+        "vmess://{}",
+        "vmess://" + base64.b64encode(b"not json").decode(),
+        "trojan://pw@",
+        "vless://u@",
+        "#" * 50,
+        "?" * 50,
+        "a" * 5000,
+        "vless://u@host:443?a=%ZZ",
+        "\t\t",
+        "'quoted'",
+        "a, b, c",
+        "ftp://u@host:21",
+        "socks5://u@host:1080",
+        "://x",
+        "198.51.100.1:",
+        "[::1]",
     ]
 
     def test_never_raises_on_junk(self) -> None:
@@ -419,7 +453,9 @@ class RobustnessTests(unittest.TestCase):
                 try:
                     result = links.parse_link(line)
                 except Exception as exc:  # pragma: no cover - the bug we guard
-                    self.fail(f"parse_link({line!r}) raised {type(exc).__name__}: {exc}")
+                    self.fail(
+                        f"parse_link({line!r}) raised {type(exc).__name__}: {exc}"
+                    )
                 self.assertTrue(result is None or isinstance(result, links.ParsedLink))
 
     def test_non_string_input_returns_none(self) -> None:

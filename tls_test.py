@@ -38,9 +38,9 @@ import socket
 import ssl
 import sys
 import time
+from collections.abc import Iterator, Sequence
 from concurrent.futures import ThreadPoolExecutor
 from dataclasses import dataclass
-from typing import Iterator, Sequence
 from urllib.parse import parse_qsl, urlsplit
 
 import Config
@@ -231,20 +231,25 @@ def tls_runner_threaded(
     max_workers = _resolve_workers(max_workers)
 
     with progress.stage("TLS handshake", len(entries)) as st:
-        cache: dict[tuple[str, int, str | None, bool], tuple[bool, float | None, str | None]] = {}
+        cache: dict[
+            tuple[str, int, str | None, bool], tuple[bool, float | None, str | None]
+        ] = {}
         out_rows: list[tuple[float, str]] = []
         faulty_rows: list[tuple[float | None, str, str]] = []
 
         for batch in _batched(entries, CHUNK_SIZE):
-            for entry, outcome in _handshake_batch(batch, cache, timeout, max_workers, st):
+            for entry, outcome in _handshake_batch(
+                batch, cache, timeout, max_workers, st
+            ):
                 _record(entry, outcome, out_rows, faulty_rows)
 
         out_rows.sort(key=lambda row: (row[0], row[1]))
         with open(output_file, "w", encoding="utf-8") as handle:
-            for ms, link_text in out_rows:
-                handle.write(f"{_render(ms)}{TAB}{link_text}\n")
+            handle.writelines(f"{_render(ms)}{TAB}{link_text}\n" for ms, link_text in out_rows)
 
-        faulty_rows.sort(key=lambda row: (row[0] is None, row[0] or 0.0, row[1], row[2]))
+        faulty_rows.sort(
+            key=lambda row: (row[0] is None, row[0] or 0.0, row[1], row[2])
+        )
         if faulty_file is not None:
             with open(faulty_file, "w", encoding="utf-8") as handle:
                 for ms, reason, link_text in faulty_rows:
@@ -355,7 +360,9 @@ def _batched(entries: Sequence[_Entry], size: int) -> Iterator[Sequence[_Entry]]
 
 def _handshake_batch(
     batch: Sequence[_Entry],
-    cache: dict[tuple[str, int, str | None, bool], tuple[bool, float | None, str | None]],
+    cache: dict[
+        tuple[str, int, str | None, bool], tuple[bool, float | None, str | None]
+    ],
     timeout: float,
     max_workers: int,
     st: progress.Stage,
@@ -458,7 +465,9 @@ def _record(
     if ok and ms is not None:
         out_rows.append((ms, entry.link_text))
         return
-    faulty_rows.append((ms if ms is not None else entry.planned_ms, reason or "tls", entry.link_text))
+    faulty_rows.append(
+        (ms if ms is not None else entry.planned_ms, reason or "tls", entry.link_text)
+    )
 
 
 def _render(value: float) -> str:

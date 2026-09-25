@@ -82,7 +82,9 @@ class TlsCheckShapeTests(support.LoopbackTestCase):
     """REGRESSION: tls_check must always return a 3-tuple."""
 
     def test_failure_returns_a_three_tuple(self) -> None:
-        result = tls_test.tls_check("127.0.0.1", support.closed_port(), "localhost", 1.0)
+        result = tls_test.tls_check(
+            "127.0.0.1", support.closed_port(), "localhost", 1.0
+        )
         self.assertIsInstance(result, tuple, "the old code returned a bare bool here")
         self.assertEqual(len(result), 3)
         self.assertEqual(result, (False, None, "refused"))
@@ -92,15 +94,20 @@ class TlsCheckShapeTests(support.LoopbackTestCase):
 
     def test_index_one_before_index_zero_never_raises(self) -> None:
         """The exact expression the old code used, on a failing handshake."""
-        result = tls_test.tls_check("127.0.0.1", support.closed_port(), "localhost", 1.0)
+        result = tls_test.tls_check(
+            "127.0.0.1", support.closed_port(), "localhost", 1.0
+        )
         self.assertFalse(result[0])
         self.assertIsNone(result[1], "index 1 must be safe to read on the failure path")
         self.assertIsInstance(result[2], str)
 
     def test_unpacking_works_on_every_failure_path(self) -> None:
         dead = support.closed_port()
-        for host, port, sni in (("", 443, None), ("127.0.0.1", dead, "localhost"),
-                                ("127.0.0.1", dead, None)):
+        for host, port, sni in (
+            ("", 443, None),
+            ("127.0.0.1", dead, "localhost"),
+            ("127.0.0.1", dead, None),
+        ):
             with self.subTest(host=host, port=port, sni=sni):
                 ok, ms, error = tls_test.tls_check(host, port, sni, 0.5)
                 self.assertIs(ok, False)
@@ -108,8 +115,12 @@ class TlsCheckShapeTests(support.LoopbackTestCase):
                 self.assertIn(error, VALID_SLUGS)
 
     def test_never_raises_on_junk_arguments(self) -> None:
-        for host, port, timeout in (("127.0.0.1", -1, 0.1), ("127.0.0.1", 0, 0.1),
-                                    ("127.0.0.1", 70000, 0.1), ("127.0.0.1", 1, 0.0)):
+        for host, port, timeout in (
+            ("127.0.0.1", -1, 0.1),
+            ("127.0.0.1", 0, 0.1),
+            ("127.0.0.1", 70000, 0.1),
+            ("127.0.0.1", 1, 0.0),
+        ):
             with self.subTest(port=port, timeout=timeout):
                 result = tls_test.tls_check(host, port, None, timeout)
                 self.assertIsInstance(result, tuple)
@@ -125,7 +136,9 @@ class TlsVerificationTests(support.LoopbackTestCase):
 
     def test_self_signed_fails_default_verification(self) -> None:
         with support.tls_listener(self.certs.certfile, self.certs.keyfile) as server:
-            ok, ms, error = tls_test.tls_check("127.0.0.1", server.port, "localhost", 3.0)
+            ok, ms, error = tls_test.tls_check(
+                "127.0.0.1", server.port, "localhost", 3.0
+            )
         self.assertIs(ok, False, "a self-signed certificate must not verify by default")
         self.assertIsNone(ms)
         self.assertEqual(error, "cert")
@@ -173,12 +186,17 @@ class TlsRunnerConservationTests(support.LoopbackTestCase):
         path = support.write_lines(self.path("in.txt"), lines)
         with self.quiet():
             stats = tls_test.tls_runner_threaded(
-                path, self.path("out.tls"), self.path("out.tls_faulty"),
-                timeout=0.5, max_workers=4,
+                path,
+                self.path("out.tls"),
+                self.path("out.tls_faulty"),
+                timeout=0.5,
+                max_workers=4,
             )
         ok_rows = support.read_lines(self.path("out.tls"))
         bad_rows = support.read_lines(self.path("out.tls_faulty"))
-        self.assertEqual(stats["tested"], len(lines) - 2, "blank lines are skipped, not tested")
+        self.assertEqual(
+            stats["tested"], len(lines) - 2, "blank lines are skipped, not tested"
+        )
         self.assertEqual(len(ok_rows) + len(bad_rows), stats["tested"])
         self.assertEqual(stats["ok"], len(ok_rows))
         self.assertEqual(stats["failed"], len(bad_rows))
@@ -189,8 +207,11 @@ class TlsRunnerConservationTests(support.LoopbackTestCase):
         path = support.write_lines(self.path("in.txt"), lines)
         with self.quiet():
             stats = tls_test.tls_runner_threaded(
-                path, self.path("out.tls"), self.path("out.tls_faulty"),
-                timeout=0.5, max_workers=2,
+                path,
+                self.path("out.tls"),
+                self.path("out.tls_faulty"),
+                timeout=0.5,
+                max_workers=2,
             )
         bad = support.read_lines(self.path("out.tls_faulty"))
         self.assertEqual(stats["failed"], 3)
@@ -208,8 +229,11 @@ class TlsRunnerConservationTests(support.LoopbackTestCase):
         )
         with self.quiet():
             tls_test.tls_runner_threaded(
-                path, self.path("out.tls"), self.path("out.tls_faulty"),
-                timeout=0.5, max_workers=2,
+                path,
+                self.path("out.tls"),
+                self.path("out.tls_faulty"),
+                timeout=0.5,
+                max_workers=2,
             )
         for row in support.read_lines(self.path("out.tls_faulty")):
             field = row.split("\t", 1)[0]
@@ -235,8 +259,11 @@ class TlsRunnerOutputTests(support.LoopbackTestCase):
         path = support.write_lines(self.path("in.txt"), lines)
         with self.quiet():
             stats = tls_test.tls_runner_threaded(
-                path, self.path("out.tls"), self.path("out.tls_faulty"),
-                timeout=1.0, max_workers=4,
+                path,
+                self.path("out.tls"),
+                self.path("out.tls_faulty"),
+                timeout=1.0,
+                max_workers=4,
             )
         return stats
 
@@ -249,12 +276,15 @@ class TlsRunnerOutputTests(support.LoopbackTestCase):
         self.assertEqual(values, [2.0, 9.0, 10.0, 100.0])
         self.assertEqual(values, sorted(values))
         self.assertNotEqual(
-            values, sorted(values, key=str),
+            values,
+            sorted(values, key=str),
             "the ordering must be numeric, not lexicographic",
         )
 
     def test_integer_milliseconds_render_without_a_decimal(self) -> None:
-        self._run_with_stubbed_handshakes([5.0, 7.0], [_link(2001, "a"), _link(2002, "b")])
+        self._run_with_stubbed_handshakes(
+            [5.0, 7.0], [_link(2001, "a"), _link(2002, "b")]
+        )
         for row in support.read_lines(self.path("out.tls")):
             field = row.split("\t", 1)[0]
             self.assertNotIn(".", field, f"{field!r} should render as a whole number")
@@ -273,7 +303,9 @@ class TlsRunnerOutputTests(support.LoopbackTestCase):
         """With a '<ms>\\t<link>' prefix, only the first tab may be consumed."""
         lines = [f"{100 + index}.0\t{text}" for index, text in enumerate(self.AWKWARD)]
         self._run_with_stubbed_handshakes([1.0] * len(lines), lines)
-        written = [row.split("\t", 1)[1] for row in support.read_lines(self.path("out.tls"))]
+        written = [
+            row.split("\t", 1)[1] for row in support.read_lines(self.path("out.tls"))
+        ]
         self.assertEqual(sorted(written), sorted(self.AWKWARD))
 
     def test_bare_input_with_a_tab_is_preserved_byte_for_byte(self) -> None:
@@ -286,7 +318,9 @@ class TlsRunnerOutputTests(support.LoopbackTestCase):
         leading field only when it matches a score or a known reason slug.
         """
         self._run_with_stubbed_handshakes([1.0] * len(self.AWKWARD), list(self.AWKWARD))
-        written = [row.split("\t", 1)[1] for row in support.read_lines(self.path("out.tls"))]
+        written = [
+            row.split("\t", 1)[1] for row in support.read_lines(self.path("out.tls"))
+        ]
         self.assertEqual(sorted(written), sorted(self.AWKWARD))
 
     def test_faulty_file_none_writes_nothing_and_still_counts(self) -> None:
@@ -300,7 +334,8 @@ class TlsRunnerOutputTests(support.LoopbackTestCase):
         self.assertEqual(stats, {"tested": 2, "ok": 0, "failed": 2})
         self.assertTrue(os.path.exists(out), "the success artifact is still written")
         self.assertEqual(
-            [p for p in os.listdir(self.workdir) if "faulty" in p], [],
+            [p for p in os.listdir(self.workdir) if "faulty" in p],
+            [],
             "no faulty file may be created when faulty_file is None",
         )
 
@@ -310,8 +345,11 @@ class TlsRunnerOutputTests(support.LoopbackTestCase):
         )
         with self.quiet():
             stats = tls_test.tls_runner_threaded(
-                path, self.path("out.tls"), self.path("out.tls_faulty"),
-                timeout=0.5, max_workers=2,
+                path,
+                self.path("out.tls"),
+                self.path("out.tls_faulty"),
+                timeout=0.5,
+                max_workers=2,
             )
         self.assertEqual(stats["tested"], 1)
 
@@ -329,7 +367,8 @@ class TlsCacheTests(support.LoopbackTestCase):
         certs = _CertFiles(self.workdir)
         with support.tls_listener(certs.certfile, certs.keyfile) as server:
             lines = [
-                _link(server.port, f"a{i}", insecure="1", sni="localhost") for i in range(12)
+                _link(server.port, f"a{i}", insecure="1", sni="localhost")
+                for i in range(12)
             ]
             lines.append(_link(server.port, "other", insecure="1", sni="localhost"))
             path = support.write_lines(self.path("in.txt"), lines)
@@ -345,11 +384,17 @@ class TlsCacheTests(support.LoopbackTestCase):
             self.addCleanup(setattr, tls_test, "tls_check", original)
             with self.quiet():
                 stats = tls_test.tls_runner_threaded(
-                    path, self.path("out.tls"), self.path("out.tls_faulty"),
-                    timeout=3.0, max_workers=4,
+                    path,
+                    self.path("out.tls"),
+                    self.path("out.tls_faulty"),
+                    timeout=3.0,
+                    max_workers=4,
                 )
-            self.assertEqual(len(calls), 1, f"{len(lines)} links over one endpoint issued "
-                                           f"{len(calls)} handshakes")
+            self.assertEqual(
+                len(calls),
+                1,
+                f"{len(lines)} links over one endpoint issued {len(calls)} handshakes",
+            )
             self.assertEqual(stats["ok"], len(lines))
 
     def test_verification_mode_is_part_of_the_cache_key(self) -> None:
@@ -365,11 +410,16 @@ class TlsCacheTests(support.LoopbackTestCase):
             )
             with self.quiet():
                 stats = tls_test.tls_runner_threaded(
-                    path, self.path("out.tls"), self.path("out.tls_faulty"),
-                    timeout=3.0, max_workers=2,
+                    path,
+                    self.path("out.tls"),
+                    self.path("out.tls_faulty"),
+                    timeout=3.0,
+                    max_workers=2,
                 )
         self.assertEqual(stats["tested"], 2)
-        self.assertEqual(stats["ok"], 1, "only the insecure link may pass a self-signed server")
+        self.assertEqual(
+            stats["ok"], 1, "only the insecure link may pass a self-signed server"
+        )
         self.assertEqual(stats["failed"], 1)
 
 
@@ -393,14 +443,18 @@ class TlsScoredInputTests(support.LoopbackTestCase):
         path = support.write_lines(self.path("in.txt"), [f"99.9\t{_link(dead, 'a')}"])
         with self.quiet():
             tls_test.tls_runner_threaded(
-                path, self.path("out.tls"), self.path("out.tls_faulty"),
-                timeout=0.5, max_workers=2,
+                path,
+                self.path("out.tls"),
+                self.path("out.tls_faulty"),
+                timeout=0.5,
+                max_workers=2,
             )
         rows = support.read_lines(self.path("out.tls_faulty"))
         self.assertEqual(len(rows), 1)
         field = rows[0].split("\t", 1)[0]
         self.assertEqual(
-            field, "99.90",
+            field,
+            "99.90",
             "the planned millisecond value must be carried into the faulty row",
         )
         self.assertEqual(float(field), 99.9)
@@ -413,11 +467,16 @@ class TlsScoredInputTests(support.LoopbackTestCase):
         """
         dead = support.closed_port()
         rendered = tls_test._render(99.9)
-        path = support.write_lines(self.path("in.txt"), [f"{rendered}\t{_link(dead, 'a')}"])
+        path = support.write_lines(
+            self.path("in.txt"), [f"{rendered}\t{_link(dead, 'a')}"]
+        )
         with self.quiet():
             tls_test.tls_runner_threaded(
-                path, self.path("out.tls"), self.path("out.tls_faulty"),
-                timeout=0.5, max_workers=2,
+                path,
+                self.path("out.tls"),
+                self.path("out.tls_faulty"),
+                timeout=0.5,
+                max_workers=2,
             )
         field = support.read_lines(self.path("out.tls_faulty"))[0].split("\t", 1)[0]
         self.assertEqual(field, rendered, "the field must survive a write/read cycle")
@@ -425,11 +484,16 @@ class TlsScoredInputTests(support.LoopbackTestCase):
     def test_a_leading_suffixed_ms_field_is_accepted(self) -> None:
         """``_ms`` is kept as an accepted legacy spelling, not as the primary one."""
         dead = support.closed_port()
-        path = support.write_lines(self.path("in.txt"), [f"99.9_ms\t{_link(dead, 'a')}"])
+        path = support.write_lines(
+            self.path("in.txt"), [f"99.9_ms\t{_link(dead, 'a')}"]
+        )
         with self.quiet():
             tls_test.tls_runner_threaded(
-                path, self.path("out.tls"), self.path("out.tls_faulty"),
-                timeout=0.5, max_workers=2,
+                path,
+                self.path("out.tls"),
+                self.path("out.tls_faulty"),
+                timeout=0.5,
+                max_workers=2,
             )
         rows = support.read_lines(self.path("out.tls_faulty"))
         self.assertEqual(rows[0].split("\t", 1)[0], "99.90")
@@ -455,11 +519,13 @@ class SplitLineTests(unittest.TestCase):
     """
 
     def _split(self, line: str) -> tuple[float | None, str]:
-        return getattr(tls_test, "_split_line")(line)  # type: ignore[no-any-return]
+        return tls_test._split_line(line)  # type: ignore[no-any-return]
 
     def test_bare_link_with_an_embedded_tab_survives_intact(self) -> None:
         """The exact link from the bug report."""
-        self.assertEqual(self._split(UNPARSEABLE_TAB_LINK), (None, UNPARSEABLE_TAB_LINK))
+        self.assertEqual(
+            self._split(UNPARSEABLE_TAB_LINK), (None, UNPARSEABLE_TAB_LINK)
+        )
         self.assertEqual(self._split(A_TAB_LINK), (None, A_TAB_LINK))
 
     def test_scored_line_keeps_a_tab_inside_its_link(self) -> None:
@@ -472,7 +538,9 @@ class SplitLineTests(unittest.TestCase):
         """This module's own failure artifact is valid input to this stage."""
         for slug in sorted(tls_test.ERROR_SLUGS):
             with self.subTest(slug=slug):
-                self.assertEqual(self._split(f"{slug}\t{A_TAB_LINK}"), (None, A_TAB_LINK))
+                self.assertEqual(
+                    self._split(f"{slug}\t{A_TAB_LINK}"), (None, A_TAB_LINK)
+                )
 
     def test_a_numeric_looking_link_prefix_is_not_mangled(self) -> None:
         """The rejection of the naive "non-empty first field" fix.
@@ -498,9 +566,7 @@ class SplitLineTests(unittest.TestCase):
         reading wins. Nothing that actually looks like a link is affected: a
         link always carries a ``:`` or ``@`` before any tab.
         """
-        self.assertEqual(
-            self._split(f"9002\t{A_TAB_LINK}"), (9002.0, A_TAB_LINK)
-        )
+        self.assertEqual(self._split(f"9002\t{A_TAB_LINK}"), (9002.0, A_TAB_LINK))
 
     def test_rejected_leading_fields_never_corrupt_the_link(self) -> None:
         """Negative, NaN, infinite, oversized and non-numeric fields.
@@ -508,16 +574,41 @@ class SplitLineTests(unittest.TestCase):
         Each of these must be rejected by the score check, which means the line is
         kept WHOLE -- the link is never split away, and no timing is invented.
         """
-        for field in ("-1", "-0.5", "nan", "NaN", "inf", "-inf", "Infinity",
-                      "1e3", "12.5ms", "n/a", "", "   ", "1,5"):
+        for field in (
+            "-1",
+            "-0.5",
+            "nan",
+            "NaN",
+            "inf",
+            "-inf",
+            "Infinity",
+            "1e3",
+            "12.5ms",
+            "n/a",
+            "",
+            "   ",
+            "1,5",
+        ):
             with self.subTest(field=field):
                 self.assertEqual(
-                    self._split(f"{field}\t{A_TAB_LINK}"), (None, f"{field}\t{A_TAB_LINK}")
+                    self._split(f"{field}\t{A_TAB_LINK}"),
+                    (None, f"{field}\t{A_TAB_LINK}"),
                 )
 
     def test_a_rejected_field_reports_no_timing(self) -> None:
-        as_ms = getattr(tls_test, "_as_ms")
-        for field in ("-1", "-0.5", "nan", "inf", "-inf", "1e3", "12.5ms", "n/a", "", "   "):
+        as_ms = tls_test._as_ms
+        for field in (
+            "-1",
+            "-0.5",
+            "nan",
+            "inf",
+            "-inf",
+            "1e3",
+            "12.5ms",
+            "n/a",
+            "",
+            "   ",
+        ):
             with self.subTest(field=field):
                 self.assertIsNone(as_ms(field), f"{field!r} must not read as a timing")
 
@@ -543,17 +634,23 @@ class SplitLineTests(unittest.TestCase):
         with support.workspace() as workdir, support.silence():
             path = support.write_lines(os.path.join(workdir, "in.txt"), lines)
             stats = tls_test.tls_runner_threaded(
-                path, os.path.join(workdir, "out.tls"),
+                path,
+                os.path.join(workdir, "out.tls"),
                 os.path.join(workdir, "out.tls_faulty"),
-                timeout=1.0, max_workers=2,
+                timeout=1.0,
+                max_workers=2,
             )
             written = [
                 row.split("\t", 1)[1]
                 for row in support.read_lines(os.path.join(workdir, "out.tls"))
             ]
             faulty = support.read_lines(os.path.join(workdir, "out.tls_faulty"))
-        self.assertEqual(stats["ok"], 3, "all three links must be probed, not filed as parse")
-        self.assertEqual(stats["failed"], 0, f"nothing should be faulty, got {faulty!r}")
+        self.assertEqual(
+            stats["ok"], 3, "all three links must be probed, not filed as parse"
+        )
+        self.assertEqual(
+            stats["failed"], 0, f"nothing should be faulty, got {faulty!r}"
+        )
         self.assertEqual(sorted(written), sorted(expected))
 
     def test_the_bug_report_link_survives_even_when_it_cannot_parse(self) -> None:
@@ -572,16 +669,19 @@ class SplitLineTests(unittest.TestCase):
         with support.workspace() as workdir, support.silence():
             path = support.write_lines(os.path.join(workdir, "in.txt"), [line])
             stats = tls_test.tls_runner_threaded(
-                path, os.path.join(workdir, "out.tls"),
+                path,
+                os.path.join(workdir, "out.tls"),
                 os.path.join(workdir, "out.tls_faulty"),
-                timeout=1.0, max_workers=1,
+                timeout=1.0,
+                max_workers=1,
             )
             faulty = support.read_lines(os.path.join(workdir, "out.tls_faulty"))
         self.assertEqual(stats, {"tested": 1, "ok": 0, "failed": 1})
         self.assertEqual(len(faulty), 1)
         self.assertEqual(faulty[0].split("\t", 1)[0], "parse")
         self.assertEqual(
-            faulty[0].split("\t", 1)[1], line,
+            faulty[0].split("\t", 1)[1],
+            line,
             "the whole link, tab and all, must be preserved",
         )
 
@@ -636,21 +736,27 @@ class ConfigOverrideTests(support.LoopbackTestCase):
         )
         with self.quiet():
             return tls_test.tls_runner_threaded(
-                path, self.path("out.tls"), self.path("out.tls_faulty"),
-                timeout=timeout, max_workers=max_workers,
+                path,
+                self.path("out.tls"),
+                self.path("out.tls_faulty"),
+                timeout=timeout,
+                max_workers=max_workers,
             )
 
     def test_overrides_reach_the_stage_when_no_arguments_are_passed(self) -> None:
         Config.apply_overrides(["TLS_TIMEOUT=9.5", "TLS_THREADS=7"])
         self._run()
         self.assertEqual(self.seen["timeouts"], {9.5}, "TLS_TIMEOUT was ignored")
-        self.assertEqual(self.seen["max_workers"], 3, "TLS_THREADS=7 was ignored (clamped to 3)")
+        self.assertEqual(
+            self.seen["max_workers"], 3, "TLS_THREADS=7 was ignored (clamped to 3)"
+        )
 
     def test_defaults_come_from_config_when_nothing_is_overridden(self) -> None:
         self._run()
         self.assertEqual(self.seen["timeouts"], {float(Config.TLS_TIMEOUT)})
         self.assertEqual(
-            self.seen["max_workers"], min(int(Config.TLS_THREADS), 3),
+            self.seen["max_workers"],
+            min(int(Config.TLS_THREADS), 3),
         )
 
     def test_explicit_arguments_still_win_over_config(self) -> None:
@@ -689,7 +795,8 @@ class SlugVocabularyTests(unittest.TestCase):
 
     def test_documented_slug_set_is_exact(self) -> None:
         self.assertEqual(
-            tls_test.ERROR_SLUGS, BASE_SLUGS | EXTENSION_SLUGS,
+            tls_test.ERROR_SLUGS,
+            BASE_SLUGS | EXTENSION_SLUGS,
             "the module's declared slug set drifted from the documented one",
         )
 
@@ -730,17 +837,29 @@ class WorkerExceptionTests(support.LoopbackTestCase):
         # stdout/stderr into; quiet() hands that buffer back.
         buffer = cast("io.StringIO", self.quiet())
         stats = tls_test.tls_runner_threaded(
-            path, self.path("out.tls"), self.path("out.tls_faulty"),
-            timeout=0.5, max_workers=2,
+            path,
+            self.path("out.tls"),
+            self.path("out.tls_faulty"),
+            timeout=0.5,
+            max_workers=2,
         )
-        self.assertEqual(sorted(seen), ["127.0.0.1:9002", "127.0.0.1:9003"],
-                         "one call per distinct endpoint")
+        self.assertEqual(
+            sorted(seen),
+            ["127.0.0.1:9002", "127.0.0.1:9003"],
+            "one call per distinct endpoint",
+        )
         self.assertEqual(stats["tested"], 2)
         self.assertEqual(stats["ok"], 0)
-        self.assertEqual(stats["failed"], 2, "the raising endpoints are failures, not a crash")
+        self.assertEqual(
+            stats["failed"], 2, "the raising endpoints are failures, not a crash"
+        )
         for row in support.read_lines(self.path("out.tls_faulty")):
             self.assertIn(row.split("\t", 1)[0], tls_test.ERROR_SLUGS)
-        self.assertIn("RuntimeError", buffer.getvalue(), "the exception must be reported, not swallowed")
+        self.assertIn(
+            "RuntimeError",
+            buffer.getvalue(),
+            "the exception must be reported, not swallowed",
+        )
         self.assertIn("worker exploded", buffer.getvalue())
 
     def test_a_raising_worker_does_not_stop_later_endpoints(self) -> None:
@@ -761,8 +880,11 @@ class WorkerExceptionTests(support.LoopbackTestCase):
         path = support.write_lines(self.path("in.txt"), lines)
         with self.quiet():
             stats = tls_test.tls_runner_threaded(
-                path, self.path("out.tls"), self.path("out.tls_faulty"),
-                timeout=0.5, max_workers=2,
+                path,
+                self.path("out.tls"),
+                self.path("out.tls_faulty"),
+                timeout=0.5,
+                max_workers=2,
             )
         self.assertEqual(stats, {"tested": 3, "ok": 1, "failed": 2})
         self.assertEqual(

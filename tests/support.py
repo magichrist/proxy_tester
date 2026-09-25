@@ -22,7 +22,6 @@ import io
 import os
 import socket
 import ssl
-import sys
 import tempfile
 import threading
 import unittest
@@ -37,7 +36,9 @@ class ExternalNetworkAccess(AssertionError):
 
 
 #: Hostnames/addresses a test is allowed to resolve or connect to.
-LOOPBACK_HOSTS = frozenset({"127.0.0.1", "::1", "localhost", "0.0.0.0", "", "ip6-localhost"})
+LOOPBACK_HOSTS = frozenset(
+    {"127.0.0.1", "::1", "localhost", "0.0.0.0", "", "ip6-localhost"}
+)
 
 _GUARD_STATE: dict[str, bool] = {"installed": False}
 
@@ -47,8 +48,7 @@ def _is_loopback(host: object) -> bool:
     if isinstance(host, (bytes, bytearray)):
         host = host.decode("ascii", "replace")
     text = str(host)
-    if text.startswith("::ffff:"):
-        text = text[len("::ffff:"):]
+    text = text.removeprefix("::ffff:")
     if text in LOOPBACK_HOSTS:
         return True
     # The whole 127.0.0.0/8 range, plus the canonical ::1 spellings.
@@ -146,7 +146,7 @@ class _ListenerBase:
             pass
         self._thread.join(timeout=2.0)
 
-    def __enter__(self) -> "_ListenerBase":
+    def __enter__(self) -> _ListenerBase:
         return self
 
     def __exit__(self, *exc: object) -> None:
@@ -227,6 +227,7 @@ def closed_port() -> int:
     finally:
         sock.close()
 
+
 # --------------------------------------------------------------------------
 # Workspace / output helpers
 # --------------------------------------------------------------------------
@@ -261,8 +262,7 @@ def read_lines(path: str) -> list[str]:
 def write_lines(path: str, lines: list[str], *, newline: str = "\n") -> str:
     """Write ``lines`` to ``path`` and return the path."""
     with open(path, "w", encoding="utf-8", newline=newline) as handle:
-        for line in lines:
-            handle.write(line + newline)
+        handle.writelines(line + newline for line in lines)
     return path
 
 
@@ -296,6 +296,7 @@ class Counter:
     @property
     def count(self) -> int:
         return len(self.calls)
+
 
 # --------------------------------------------------------------------------
 # Certificate material

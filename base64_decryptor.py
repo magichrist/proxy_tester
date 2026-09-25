@@ -270,8 +270,7 @@ def runner(input_file, output_file) -> DecodeStats:
     out_lines, blocks, decoded_blocks, decoded_lines = _decode_lines(lines_in)
 
     with open(output_file, "w", encoding="utf-8", newline="\n") as handle:
-        for line in out_lines:
-            handle.write(line + "\n")
+        handle.writelines(line + "\n" for line in out_lines)
 
     return DecodeStats(
         lines_in=len(lines_in),

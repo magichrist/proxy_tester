@@ -16,7 +16,7 @@ import unittest
 try:  # discovery puts tests/ on sys.path; a package import also works
     import support
 except ImportError:  # pragma: no cover
-    from tests import support  # type: ignore[no-redef]
+    pass  # type: ignore[no-redef]
 
 import progress
 
@@ -28,7 +28,7 @@ class _Capture:
         self.buffer = io.StringIO()
         self._original = sys.stdout
 
-    def __enter__(self) -> "_Capture":
+    def __enter__(self) -> _Capture:
         sys.stdout = self.buffer
         return self
 
@@ -60,10 +60,9 @@ class StageAdvanceTests(unittest.TestCase):
         self.assertTrue(any("finished" in line for line in out.lines))
 
     def test_advances_with_a_known_total(self) -> None:
-        with _Capture() as out:
-            with progress.stage("scanning", 10) as stage:
-                for _ in range(10):
-                    stage.advance()
+        with _Capture() as out, progress.stage("scanning", 10) as stage:
+            for _ in range(10):
+                stage.advance()
         self.assertEqual(stage.count, 10)
         self.assertIn("10/10", out.text)
         self.assertIn("100%", out.text)
@@ -164,7 +163,9 @@ class EmptyStageTests(unittest.TestCase):
             with progress.stage("untouched", 5) as stage:
                 pass
             self.assertEqual(stage.count, 0)
-        self.assertEqual(out.text, "", "0/5 would be a measurement of a stage that never ran")
+        self.assertEqual(
+            out.text, "", "0/5 would be a measurement of a stage that never ran"
+        )
 
     def test_a_summary_is_emitted_even_when_the_stage_prints_nothing(self) -> None:
         """Suppressing the bar must never swallow what the caller handed over.
@@ -184,38 +185,37 @@ class NonTtyTests(unittest.TestCase):
     """Piped/CI output must be sparse lines, not a carriage-return storm."""
 
     def test_no_carriage_return_is_emitted(self) -> None:
-        with _Capture() as out:
-            with progress.stage("noisy", 100) as stage:
-                for _ in range(100):
-                    stage.advance()
+        with _Capture() as out, progress.stage("noisy", 100) as stage:
+            for _ in range(100):
+                stage.advance()
         self.assertNotIn("\r", out.text, "a non-TTY must never redraw in place")
         self.assertNotIn("\x1b[2K", out.text, "a non-TTY must never emit an ANSI erase")
 
     def test_unknown_total_emits_a_bounded_number_of_lines(self) -> None:
-        with _Capture() as out:
-            with progress.stage("huge", None) as stage:
-                for _ in range(1000):
-                    stage.advance()
+        with _Capture() as out, progress.stage("huge", None) as stage:
+            for _ in range(1000):
+                stage.advance()
         self.assertLessEqual(
-            len(out.lines), 20,
+            len(out.lines),
+            20,
             f"1000 advances produced {len(out.lines)} lines; a pipe should get a handful",
         )
 
     def test_known_total_emits_far_fewer_lines_than_items(self) -> None:
-        with _Capture() as out:
-            with progress.stage("huge", 1000) as stage:
-                for _ in range(1000):
-                    stage.advance()
+        with _Capture() as out, progress.stage("huge", 1000) as stage:
+            for _ in range(1000):
+                stage.advance()
         self.assertLessEqual(len(out.lines), 12)
         self.assertGreaterEqual(len(out.lines), 1)
 
     def test_every_emitted_line_is_complete(self) -> None:
-        with _Capture() as out:
-            with progress.stage("huge", 200) as stage:
-                for _ in range(200):
-                    stage.advance()
+        with _Capture() as out, progress.stage("huge", 200) as stage:
+            for _ in range(200):
+                stage.advance()
         for line in out.lines:
-            self.assertTrue(line.startswith("["), f"truncated in-place redraw: {line!r}")
+            self.assertTrue(
+                line.startswith("["), f"truncated in-place redraw: {line!r}"
+            )
 
 
 class _BrokenStream(io.StringIO):
@@ -232,7 +232,12 @@ class SummaryTableTests(unittest.TestCase):
     """summary_table is the final report block."""
 
     def test_contains_every_row(self) -> None:
-        rows = [("links_in", 12345), ("endpoints", 678), ("tls_ok", 9), ("tls_failed", 10)]
+        rows = [
+            ("links_in", 12345),
+            ("endpoints", 678),
+            ("tls_ok", 9),
+            ("tls_failed", 10),
+        ]
         with _Capture() as out:
             progress.summary_table(rows)
         for label, value in rows:
@@ -253,7 +258,9 @@ class SummaryTableTests(unittest.TestCase):
             progress.summary_table([("a", 1), ("bbbbbbbbbb", 1234567)])
         numbers = [line.split()[-1] for line in out.lines]
         self.assertEqual(numbers, ["1", "1,234,567"])
-        self.assertEqual(len({len(line) for line in out.lines}), 1, "rows must be the same width")
+        self.assertEqual(
+            len({len(line) for line in out.lines}), 1, "rows must be the same width"
+        )
 
     def test_empty_rows_emits_nothing(self) -> None:
         with _Capture() as out:

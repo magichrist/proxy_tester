@@ -60,9 +60,14 @@ ALLOWED_IP_LITERALS = {
     "0.0.0.0",
     # RFC 5737 / RFC 3849 documentation ranges, used in parse-only fixtures
     # where no socket is ever created.
-    "192.0.2.0", "192.0.2.1",
-    "198.51.100.0", "198.51.100.1", "198.51.100.7", "198.51.100.9",
-    "203.0.113.0", "203.0.113.5",
+    "192.0.2.0",
+    "192.0.2.1",
+    "198.51.100.0",
+    "198.51.100.1",
+    "198.51.100.7",
+    "198.51.100.9",
+    "203.0.113.0",
+    "203.0.113.5",
     "999.1.1.1",  # deliberately invalid, asserted to be rejected by the parser
 }
 
@@ -71,10 +76,21 @@ _URL_RE = re.compile(r"\b[a-zA-Z][a-zA-Z0-9+.\-]*://")
 
 #: Schemes that may appear in a test: the link formats under test, plus the
 #: schemes used in "this is not a link" fixtures. None of them is dereferenced.
-LINK_SCHEMES = frozenset({
-    "vless", "vmess", "trojan", "ss", "tcp", "socks", "http", "https",
-    "ftp", "file", "data",
-})
+LINK_SCHEMES = frozenset(
+    {
+        "vless",
+        "vmess",
+        "trojan",
+        "ss",
+        "tcp",
+        "socks",
+        "http",
+        "https",
+        "ftp",
+        "file",
+        "data",
+    }
+)
 
 
 #: This file necessarily names forbidden hosts, because it is the thing that
@@ -100,7 +116,7 @@ def _strip_literals_and_comments(text: str) -> str:
     Docstrings legitimately name real services when explaining what the tool is
     for; only actual host literals in code matter.
     """
-    without_block_comments = re.sub(r"\"\"\".*?\"\"\"", '""', text, flags=re.S)
+    without_block_comments = re.sub(r"\"\"\".*?\"\"\"", '""', text, flags=re.DOTALL)
     without_comments = re.sub(r"#.*", "", without_block_comments)
     return re.sub(r"'(?:[^'\\\n]|\\.)*'", "''", without_comments)
 
@@ -194,26 +210,57 @@ class NoDependencyTests(unittest.TestCase):
         with open(path, "r", encoding="utf-8") as handle:
             content = handle.read()
         self.assertEqual(
-            content.strip(), "",
+            content.strip(),
+            "",
             "the project is stdlib-only; requirements.txt must stay empty",
         )
 
     def test_no_test_imports_a_third_party_package(self) -> None:
         allowed = {
             # stdlib
-            "base64", "binascii", "collections", "contextlib", "io", "json",
-            "os", "re", "shutil", "socket", "ssl", "sys", "tempfile", "textwrap",
-            "threading", "time", "types", "typing", "unittest", "urllib",
-            "dataclasses", "itertools", "pathlib", "subprocess", "weakref",
+            "base64",
+            "binascii",
+            "collections",
+            "contextlib",
+            "io",
+            "json",
+            "os",
+            "re",
+            "shutil",
+            "socket",
+            "ssl",
+            "sys",
+            "tempfile",
+            "textwrap",
+            "threading",
+            "time",
+            "types",
+            "typing",
+            "unittest",
+            "urllib",
+            "dataclasses",
+            "itertools",
+            "pathlib",
+            "subprocess",
+            "weakref",
             "__future__",
-            "xml", "http", "email", "stat",
+            "xml",
+            "http",
+            "email",
+            "stat",
             # the project itself
-            "Config", "base64_decryptor", "links", "netprobe", "progress",
-            "start", "tls_test", "tests",
+            "Config",
+            "base64_decryptor",
+            "links",
+            "netprobe",
+            "progress",
+            "start",
+            "tls_test",
+            "tests",
             # this suite
             "support",
         }
-        import_re = re.compile(r"^\s*(?:from|import)\s+([A-Za-z_][A-Za-z0-9_.]*)", re.M)
+        import_re = re.compile(r"^\s*(?:from|import)\s+([A-Za-z_][A-Za-z0-9_.]*)", re.MULTILINE)
         offenders = set()
         for name, text in _sources():
             for match in import_re.finditer(text):
